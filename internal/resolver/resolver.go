@@ -16,14 +16,20 @@ import (
 
 const typeTxtRecord = "TXT"
 
-func NewResolver(httpClient *http.Client) webhook.Solver {
+func NewResolver(
+	httpClient *http.Client,
+	zoneRepositoryFactory repository.ZoneRepositoryFactory,
+	rrSetRepositoryFactory repository.RRSetRepositoryFactory,
+	secretFetcher SecretFetcher,
+	configProvider ConfigProvider,
+) webhook.Solver {
 	return &stackitDnsProviderResolver{
 		ctx:                    context.Background(),
 		httpClient:             httpClient,
-		configProvider:         defaultConfigProvider{},
-		secretFetcher:          &kubeSecretFetcher{},
-		zoneRepositoryFactory:  repository.NewZoneRepositoryFactory(),
-		rrSetRepositoryFactory: repository.NewRRSetRepositoryFactory(),
+		configProvider:         configProvider,
+		secretFetcher:          secretFetcher,
+		zoneRepositoryFactory:  zoneRepositoryFactory,
+		rrSetRepositoryFactory: rrSetRepositoryFactory,
 	}
 }
 

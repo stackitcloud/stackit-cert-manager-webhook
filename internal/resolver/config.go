@@ -14,7 +14,9 @@ type ConfigProvider interface {
 	LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProviderConfig, error)
 }
 
-type defaultConfigProvider struct{}
+type defaultConfigProvider struct {
+	fileNamespaceName string
+}
 
 type StackitDnsProviderConfig struct {
 	ProjectId                string `json:"projectId"`
@@ -41,7 +43,7 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 
 	setDefaultValues(&cfg)
 
-	namespace, err := determineNamespace(cfg.AuthTokenSecretNamespace)
+	namespace, err := determineNamespace(cfg.AuthTokenSecretNamespace, d.fileNamespaceName)
 	if err != nil {
 		return cfg, err
 	}
@@ -78,12 +80,12 @@ func setDefaultValues(cfg *StackitDnsProviderConfig) {
 	}
 }
 
-func determineNamespace(currentNamespace string) (string, error) {
+func determineNamespace(currentNamespace string, fileNamespaceName string) (string, error) {
 	if currentNamespace != "" {
 		return currentNamespace, nil
 	}
 
-	data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	data, err := os.ReadFile(fileNamespaceName)
 	if err != nil {
 		return "", fmt.Errorf("failed to find the webhook pod namespace: %w", err)
 	}
@@ -94,4 +96,10 @@ func determineNamespace(currentNamespace string) (string, error) {
 	}
 
 	return namespace, nil
+}
+
+func NewConfigProvider() ConfigProvider {
+	return defaultConfigProvider{
+		fileNamespaceName: "/var/run/secrets/kubernetes.io/serviceaccount/namespace",
+	}
 }

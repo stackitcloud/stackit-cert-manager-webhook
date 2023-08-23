@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
+	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver"
 	_ "go.uber.org/automaxprocs"
 )
@@ -22,7 +23,14 @@ func main() {
 	// You can register multiple DNS provider implementations with a single
 	// webhook, where the Name() method will be used to disambiguate between
 	// the different implementations.
-	cmd.RunWebhookServer(GroupName,
-		resolver.NewResolver(&http.Client{}),
+	cmd.RunWebhookServer(
+		GroupName,
+		resolver.NewResolver(
+			&http.Client{},
+			repository.NewZoneRepositoryFactory(),
+			repository.NewRRSetRepositoryFactory(),
+			resolver.NewSecretFetcher(),
+			resolver.NewConfigProvider(),
+		),
 	)
 }

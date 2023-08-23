@@ -14,7 +14,7 @@ type SecretFetcher interface {
 }
 
 type kubeSecretFetcher struct {
-	client *kubernetes.Clientset
+	client kubernetes.Interface
 	ctx    context.Context
 }
 
@@ -31,4 +31,8 @@ func (k *kubeSecretFetcher) StringFromSecret(namespace, secretName, key string) 
 	}
 
 	return string(binary), nil
+}
+
+func NewSecretFetcher() SecretFetcher {
+	return &kubeSecretFetcher{}
 }

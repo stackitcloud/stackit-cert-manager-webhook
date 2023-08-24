@@ -243,7 +243,7 @@ func TestCleanTestSuite(t *testing.T) {
 	suite.Run(t, cSuite)
 }
 
-func (s *cleanSuite) TestFailFetchRRSet() {
+func (s *cleanSuite) setupCommonMocks() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
@@ -259,6 +259,10 @@ func (s *cleanSuite) TestFailFetchRRSet() {
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository)
+}
+
+func (s *cleanSuite) TestFailFetchRRSet() {
+	s.setupCommonMocks()
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, fmt.Errorf("error fetching rr set"))
@@ -273,21 +277,7 @@ func (s *cleanSuite) TestFailFetchRRSet() {
 }
 
 func (s *cleanSuite) TestFailFetchNoRRSet() {
-	s.mockConfigProvider.EXPECT().
-		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
-	s.mockZoneRepositoryFactory.EXPECT().
-		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
-	s.mockZoneRepository.EXPECT().
-		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
-	s.mockRRSetRepositoryFactory.EXPECT().
-		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+	s.setupCommonMocks()
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, repository.ErrRRSetNotFound)
@@ -297,21 +287,7 @@ func (s *cleanSuite) TestFailFetchNoRRSet() {
 }
 
 func (s *cleanSuite) TestFailDeleteNoRRSet() {
-	s.mockConfigProvider.EXPECT().
-		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
-	s.mockZoneRepositoryFactory.EXPECT().
-		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
-	s.mockZoneRepository.EXPECT().
-		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
-	s.mockRRSetRepositoryFactory.EXPECT().
-		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+	s.setupCommonMocks()
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient.DomainRrSet{}, nil)
@@ -324,21 +300,7 @@ func (s *cleanSuite) TestFailDeleteNoRRSet() {
 }
 
 func (s *cleanSuite) TestFailDeleteRRSet() {
-	s.mockConfigProvider.EXPECT().
-		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
-	s.mockZoneRepositoryFactory.EXPECT().
-		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
-	s.mockZoneRepository.EXPECT().
-		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
-	s.mockRRSetRepositoryFactory.EXPECT().
-		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+	s.setupCommonMocks()
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient.DomainRrSet{}, nil)
@@ -356,21 +318,7 @@ func (s *cleanSuite) TestFailDeleteRRSet() {
 }
 
 func (s *cleanSuite) TestSuccessDeleteRRSet() {
-	s.mockConfigProvider.EXPECT().
-		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
-	s.mockZoneRepositoryFactory.EXPECT().
-		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
-	s.mockZoneRepository.EXPECT().
-		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
-	s.mockRRSetRepositoryFactory.EXPECT().
-		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+	s.setupCommonMocks()
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient.DomainRrSet{}, nil)

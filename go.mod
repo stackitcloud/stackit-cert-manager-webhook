@@ -1,6 +1,6 @@
 module github.com/stackitcloud/stackit-cert-manager-webhook
 
-go 1.21.0
+go 1.21
 
 require (
 	github.com/antihax/optional v1.0.0

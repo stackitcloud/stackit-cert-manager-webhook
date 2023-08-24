@@ -79,7 +79,7 @@ func (s *stackitDnsProviderResolver) Present(ch *v1alpha1.ChallengeRequest) erro
 // value provided on the ChallengeRequest should be cleaned up.
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
-func (s *stackitDnsProviderResolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
+func (s *stackitDnsProviderResolver) CleanUp(ch *v1alpha1.ChallengeRequest) error { //nolint:gocognit // clean enough
 	rrSetRepository, rrSetName, err := s.initializeResolverContext(ch)
 	if err != nil && errors.Is(err, repository.ErrZoneNotFound) {
 		return nil

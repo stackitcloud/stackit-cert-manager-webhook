@@ -4,20 +4,25 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
 	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 const typeTxtRecord = "TXT"
 
+var stackitAuthToken = os.Getenv("STACKIT_AUTH_TOKEN")
+
 func NewResolver(
 	httpClient *http.Client,
+	logger *zap.Logger,
 	zoneRepositoryFactory repository.ZoneRepositoryFactory,
 	rrSetRepositoryFactory repository.RRSetRepositoryFactory,
 	secretFetcher SecretFetcher,
@@ -30,6 +35,7 @@ func NewResolver(
 		secretFetcher:          secretFetcher,
 		zoneRepositoryFactory:  zoneRepositoryFactory,
 		rrSetRepositoryFactory: rrSetRepositoryFactory,
+		logger:                 logger,
 	}
 }
 
@@ -40,6 +46,7 @@ type stackitDnsProviderResolver struct {
 	secretFetcher          SecretFetcher
 	zoneRepositoryFactory  repository.ZoneRepositoryFactory
 	rrSetRepositoryFactory repository.RRSetRepositoryFactory
+	logger                 *zap.Logger
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -65,12 +72,12 @@ func (s *stackitDnsProviderResolver) Present(ch *v1alpha1.ChallengeRequest) erro
 
 	rrSet, err := rrSetRepository.FetchRRSetForZone(s.ctx, rrSetName, typeTxtRecord)
 	if errors.Is(err, repository.ErrRRSetNotFound) {
-		return s.createRRSet(rrSetRepository, rrSetName, ch.Key)
+		return s.handleRRSetNotFound(rrSetRepository, rrSetName, ch.Key)
 	} else if err != nil {
 		return err
 	}
 
-	return rrSetRepository.UpdateRRSet(s.ctx, *rrSet)
+	return s.updateExistingRRSet(rrSetRepository, rrSet, rrSetName)
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -79,33 +86,13 @@ func (s *stackitDnsProviderResolver) Present(ch *v1alpha1.ChallengeRequest) erro
 // value provided on the ChallengeRequest should be cleaned up.
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
-func (s *stackitDnsProviderResolver) CleanUp(ch *v1alpha1.ChallengeRequest) error { //nolint:gocognit // clean enough
+func (s *stackitDnsProviderResolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	rrSetRepository, rrSetName, err := s.initializeResolverContext(ch)
-	if err != nil && errors.Is(err, repository.ErrZoneNotFound) {
-		return nil
-	}
 	if err != nil {
-		return err
+		return s.handleErrorDuringInitialization(err)
 	}
 
-	rrSet, err := rrSetRepository.FetchRRSetForZone(s.ctx, rrSetName, typeTxtRecord)
-	// if the rr set does not exist it may be already deleted
-	if err != nil && errors.Is(err, repository.ErrRRSetNotFound) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	err = rrSetRepository.DeleteRRSet(s.ctx, rrSet.Id)
-	if err != nil && errors.Is(err, repository.ErrRRSetNotFound) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.handleRRSetCleanup(rrSetRepository, rrSetName)
 }
 
 // Initialize will be called when the webhook first starts.
@@ -121,8 +108,12 @@ func (s *stackitDnsProviderResolver) Initialize(
 	kubeClientConfig *rest.Config,
 	stopCh <-chan struct{},
 ) error {
+	s.logger.Info("Initializing stackit resolver")
+
 	cl, err := kubernetes.NewForConfig(kubeClientConfig)
 	if err != nil {
+		s.logger.Error("Error initializing kubernetes client", zap.Error(err))
+
 		return err
 	}
 
@@ -130,6 +121,8 @@ func (s *stackitDnsProviderResolver) Initialize(
 		client: cl,
 		ctx:    s.ctx,
 	}
+
+	s.logger.Info("Stackit resolver initialized")
 
 	return nil
 }
@@ -196,6 +189,10 @@ func (s *stackitDnsProviderResolver) createRRSet(
 
 // getAuthToken from Kubernetes secretFetcher.
 func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig) (string, error) {
+	if stackitAuthToken != "" {
+		return stackitAuthToken, nil
+	}
+
 	token, err := s.secretFetcher.StringFromSecret(
 		cfg.AuthTokenSecretNamespace,
 		cfg.AuthTokenSecretRef,
@@ -213,4 +210,122 @@ func getZoneDnsNameAndRRSetName(ch *v1alpha1.ChallengeRequest) (string, string) 
 	domain := strings.TrimSuffix(ch.ResolvedZone, ".")
 
 	return domain, ch.ResolvedFQDN
+}
+
+func (s *stackitDnsProviderResolver) handleErrorDuringInitialization(
+	err error,
+) error {
+	if errors.Is(err, repository.ErrZoneNotFound) {
+		return nil
+	}
+
+	return err
+}
+
+func (s *stackitDnsProviderResolver) handleRRSetCleanup(
+	rrSetRepository repository.RRSetRepository,
+	rrSetName string,
+) error {
+	s.logger.Info("Cleaning up RRSet", zap.String("rrSetName", rrSetName))
+
+	rrSet, err := rrSetRepository.FetchRRSetForZone(s.ctx, rrSetName, typeTxtRecord)
+	if err != nil {
+		return s.handleFetchRRSetError(err, rrSetName)
+	}
+
+	return s.deleteRRSet(rrSetRepository, rrSet, rrSetName)
+}
+
+func (s *stackitDnsProviderResolver) handleFetchRRSetError(err error, rrSetName string) error {
+	if errors.Is(err, repository.ErrRRSetNotFound) {
+		s.logger.Info("RRSet not found, nothing to clean up", zap.String("rrSetName", rrSetName))
+
+		return nil
+	}
+
+	s.logger.Error("Error fetching RRSet", zap.Error(err), zap.String("rrSetName", rrSetName))
+
+	return err
+}
+
+func (s *stackitDnsProviderResolver) deleteRRSet(
+	rrSetRepository repository.RRSetRepository,
+	rrSet *stackitdnsclient.DomainRrSet,
+	rrSetName string,
+) error {
+	err := rrSetRepository.DeleteRRSet(s.ctx, rrSet.Id)
+	if err != nil {
+		return s.handleDeleteRRSetError(err, rrSetName, rrSet.Id)
+	}
+
+	s.logger.Info(
+		"RRSet deleted",
+		zap.String("rrSetName", rrSetName),
+		zap.String("rrSetId", rrSet.Id),
+	)
+
+	return nil
+}
+
+func (s *stackitDnsProviderResolver) handleDeleteRRSetError(
+	err error,
+	rrSetName, rrSetId string,
+) error {
+	if errors.Is(err, repository.ErrRRSetNotFound) {
+		s.logger.Info(
+			"RRSet not found, nothing to clean up",
+			zap.String("rrSetName", rrSetName),
+			zap.String("rrSetId", rrSetId),
+		)
+
+		return nil
+	}
+	s.logger.Error(
+		"Error deleting RRSet",
+		zap.Error(err),
+		zap.String("rrSetName", rrSetName),
+		zap.String("rrSetId", rrSetId),
+	)
+
+	return err
+}
+
+func (s *stackitDnsProviderResolver) handleRRSetNotFound(
+	rrSetRepository repository.RRSetRepository,
+	rrSetName string,
+	challengeKey string,
+) error {
+	s.logger.Info("RRSet not found, creating new RRSet", zap.String("rrSetName", rrSetName))
+
+	if err := s.createRRSet(rrSetRepository, rrSetName, challengeKey); err != nil {
+		s.logger.Error(
+			"Error creating RRSet",
+			zap.Error(err),
+			zap.String("rrSetName", rrSetName),
+		)
+
+		return err
+	}
+
+	s.logger.Info("RRSet created", zap.String("rrSetName", rrSetName))
+
+	return nil
+}
+
+func (s *stackitDnsProviderResolver) updateExistingRRSet(
+	rrSetRepository repository.RRSetRepository,
+	rrSet *stackitdnsclient.DomainRrSet,
+	rrSetName string,
+) error {
+	s.logger.Info("RRSet found, updating RRSet", zap.String("rrSetName", rrSetName))
+
+	if err := rrSetRepository.UpdateRRSet(s.ctx, *rrSet); err != nil {
+		s.logger.Error("Error updating RRSet", zap.Error(err), zap.String("rrSetName", rrSetName))
+
+		return err
+	}
+
+	s.logger.Info("RRSet updated", zap.String("rrSetName", rrSetName))
+
+	return nil
 }

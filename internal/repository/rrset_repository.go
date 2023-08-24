@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/antihax/optional"
 	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
@@ -56,7 +57,7 @@ func (r *rrSetRepository) FetchRRSetForZone(
 ) (*stackitdnsclient.DomainRrSet, error) {
 	queryParams := stackitdnsclient.RecordSetApiV1ProjectsProjectIdZonesZoneIdRrsetsGetOpts{
 		ActiveEq: optional.NewBool(true),
-		NameEq:   optional.NewString(rrSetName),
+		NameEq:   optional.NewString(strings.ToLower(rrSetName)),
 		TypeEq:   optional.NewString(rrSetType),
 	}
 

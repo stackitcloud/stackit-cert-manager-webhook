@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/antihax/optional"
 	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
@@ -48,7 +49,7 @@ func (z *zoneRepository) FetchZone(
 ) (*stackitdnsclient.DomainZone, error) {
 	queryParams := stackitdnsclient.ZoneApiV1ProjectsProjectIdZonesGetOpts{
 		ActiveEq:  optional.NewBool(true),
-		DnsNameEq: optional.NewString(zoneDnsName),
+		DnsNameEq: optional.NewString(strings.ToLower(zoneDnsName)),
 	}
 
 	zoneResponse, _, err := z.apiClient.ZoneApi.V1ProjectsProjectIdZonesGet(

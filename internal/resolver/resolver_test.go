@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 )
@@ -29,7 +30,7 @@ var (
 func TestName(t *testing.T) {
 	t.Parallel()
 
-	r := resolver.NewResolver(nil, nil, nil, nil, nil)
+	r := resolver.NewResolver(nil, zap.NewNop(), nil, nil, nil, nil)
 
 	assert.Equal(t, r.Name(), "stackit")
 }
@@ -37,7 +38,7 @@ func TestName(t *testing.T) {
 func TestInitialize(t *testing.T) {
 	t.Parallel()
 
-	r := resolver.NewResolver(nil, nil, nil, nil, nil)
+	r := resolver.NewResolver(nil, zap.NewNop(), nil, nil, nil, nil)
 
 	t.Run("successful init", func(t *testing.T) {
 		t.Parallel()
@@ -78,6 +79,7 @@ func (s *presentSuite) SetupTest() {
 
 	s.resolver = resolver.NewResolver(
 		&http.Client{},
+		zap.NewNop(),
 		s.mockZoneRepositoryFactory,
 		s.mockRRSetRepositoryFactory,
 		s.mockSecretFetcher,

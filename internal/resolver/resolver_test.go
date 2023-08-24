@@ -229,3 +229,155 @@ func (s *presentSuite) TestSuccessUpdateRRSet() {
 	err := s.resolver.Present(challengeRequest)
 	s.NoError(err)
 }
+
+type cleanSuite struct {
+	presentSuite
+}
+
+func TestCleanTestSuite(t *testing.T) {
+	t.Parallel()
+
+	cSuite := new(cleanSuite)
+	cSuite.ctrl = gomock.NewController(t)
+
+	suite.Run(t, cSuite)
+}
+
+func (s *cleanSuite) TestFailFetchRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockSecretFetcher.EXPECT().
+		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, fmt.Errorf("error fetching rr set"))
+
+	err := s.resolver.CleanUp(challengeRequest)
+	s.Error(err)
+	s.Containsf(
+		err.Error(),
+		"error fetching rr set",
+		"error message should contain error from rrSetRepository",
+	)
+}
+
+func (s *cleanSuite) TestFailFetchNoRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockSecretFetcher.EXPECT().
+		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, repository.ErrRRSetNotFound)
+
+	err := s.resolver.CleanUp(challengeRequest)
+	s.NoError(err)
+}
+
+func (s *cleanSuite) TestFailDeleteNoRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockSecretFetcher.EXPECT().
+		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainRrSet{}, nil)
+	s.mockRRSetRepository.EXPECT().
+		DeleteRRSet(gomock.Any(), gomock.Any()).
+		Return(repository.ErrRRSetNotFound)
+
+	err := s.resolver.CleanUp(challengeRequest)
+	s.NoError(err)
+}
+
+func (s *cleanSuite) TestFailDeleteRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockSecretFetcher.EXPECT().
+		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainRrSet{}, nil)
+	s.mockRRSetRepository.EXPECT().
+		DeleteRRSet(gomock.Any(), gomock.Any()).
+		Return(fmt.Errorf("error deleting rr set"))
+
+	err := s.resolver.CleanUp(challengeRequest)
+	s.Error(err)
+	s.Containsf(
+		err.Error(),
+		"error deleting rr set",
+		"error message should contain error from rrSetRepository",
+	)
+}
+
+func (s *cleanSuite) TestSuccessDeleteRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockSecretFetcher.EXPECT().
+		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient.DomainRrSet{}, nil)
+	s.mockRRSetRepository.EXPECT().
+		DeleteRRSet(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	err := s.resolver.CleanUp(challengeRequest)
+	s.NoError(err)
+}

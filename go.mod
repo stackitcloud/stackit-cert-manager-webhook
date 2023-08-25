@@ -10,9 +10,9 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/mock v0.2.0
 	go.uber.org/zap v1.25.0
-	k8s.io/api v0.28.0
+	k8s.io/api v0.28.1
 	k8s.io/apiextensions-apiserver v0.28.0
-	k8s.io/apimachinery v0.28.0
+	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.0
 )
 

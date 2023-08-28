@@ -100,3 +100,20 @@ For scenarios wherein zones and record sets are encapsulated within a singular p
 
 - End-to-End Testing Workflow:  
 Follow the comprehensive guide available [here](e2e_test/README.md).
+
+## Release Process Overview
+Our release pipeline leverages goreleaser for the generation and publishing of release assets. 
+This sophisticated approach ensures the streamlined delivery of:
+- Pre-compiled binaries tailored for various platforms.
+- Docker images optimized for production readiness.
+
+However, one should be cognizant of the fact that goreleaser doesn't inherently support Helm chart distributions 
+as part of its conventional workflow. Historically, the incorporation of Helm charts into our releases demanded manual 
+intervention. Post the foundational release generation via goreleaser, the Helm chart was affixed as an asset through 
+manual processes.    
+For those interested in the Helm chart creation mechanics, the process was facilitated via the command:
+```bash
+helm package deploy/stackit
+```
+To release a new version of the Helm chart, one must meticulously update the version delineation in the 
+[Chart.yaml](./deploy/stackit/Chart.yaml). Post this modification, initiate a new release to encompass these changes.

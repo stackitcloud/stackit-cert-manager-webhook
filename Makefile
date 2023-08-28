@@ -57,7 +57,7 @@ test-e2e:
 	@STACKIT_TOKEN=$(STACKIT_TOKEN) TEST_ZONE_NAME=$(TEST_ZONE_NAME) go test -race -tags=e2e ./... -coverprofile out/cover.out
 
 run:
-	go run cmd/main.go
+	go run cmd/webhook/main.go
 
 .PHONY: clean
 clean:

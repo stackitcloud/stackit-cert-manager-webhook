@@ -17,7 +17,7 @@ ACME Issuer with [cert-manager](https://cert-manager.io/docs/).
 ```bash
 helm install stackit-cert-manager-webhook \
   --namespace cert-manager \
-  https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.2.0/stackit-cert-manager-webhook-v0.2.0.tgz
+  https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.1.1/stackit-cert-manager-webhook-v0.1.1.tgz
 ```
 
 ## Usage

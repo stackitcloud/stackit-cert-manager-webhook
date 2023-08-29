@@ -7,7 +7,6 @@ import (
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver"
-	_ "go.uber.org/automaxprocs"
 	"go.uber.org/zap"
 )
 

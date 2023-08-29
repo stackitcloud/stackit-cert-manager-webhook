@@ -28,12 +28,13 @@ spec:
           args:
             - --tls-cert-file=/tls/tls.crt
             - --tls-private-key-file=/tls/tls.key
+            - --secure-port=8443
           env:
             - name: GROUP_NAME
               value: {{ .Values.groupName | quote }}
           ports:
             - name: https
-              containerPort: 443
+              containerPort: 8443
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -45,6 +46,10 @@ spec:
               scheme: HTTPS
               path: /healthz
               port: https
+        {{- with .Values.securityContext }}
+          securityContext:
+{{ toYaml . | indent 12 }}
+        {{- end }}
           volumeMounts:
             - name: certs
               mountPath: /tls
@@ -55,6 +60,10 @@ spec:
         - name: certs
           secret:
             secretName: {{ include "stackit-cert-manager-webhook.servingCertificate" . }}
+    {{- with .Values.podSecurityContext }}
+      securityContext:
+{{ toYaml . | indent 8 }}
+    {{- end }}
     {{- with .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}

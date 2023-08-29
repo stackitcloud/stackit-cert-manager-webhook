@@ -6,7 +6,9 @@
 # solve the DNS01 challenge.
 # This group name should be **unique**, hence using your own company's domain
 # here is recommended.
-groupName: stackit.de
+groupName: acme.stackit.de
+
+replicaCount: 1
 
 certManager:
   namespace: cert-manager
@@ -41,3 +43,13 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+podSecurityContext:
+  runAsGroup: 1000
+  runAsUser: 1000
+  runAsNonRoot: true

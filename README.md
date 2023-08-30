@@ -45,7 +45,7 @@ For scenarios wherein zones and record sets are encapsulated within a singular p
         - dns01:
             webhook:
               solverName: stackit
-              groupName: stackit.de
+              groupName: acme.stackit.de
               config:
                 projectId: <STACKIT PROJECT ID>
     ```
@@ -74,7 +74,7 @@ For scenarios wherein zones and record sets are encapsulated within a singular p
         - dns01:
             webhook:
               solverName: stackit
-              groupName: stackit.de
+              groupName: acme.stackit.de
               config:
                 projectId: <STACKIT PROJECT ID>
                 authTokenSecretNamespace: default

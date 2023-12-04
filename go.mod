@@ -4,15 +4,15 @@ go 1.21
 
 require (
 	github.com/antihax/optional v1.0.0
-	github.com/cert-manager/cert-manager v1.11.0
+	github.com/cert-manager/cert-manager v1.13.2
 	github.com/stackitcloud/stackit-dns-api-client-go v0.0.0-20230228185514-6838d6d6f051
 	github.com/stretchr/testify v1.8.4
-	go.uber.org/mock v0.2.0
-	go.uber.org/zap v1.25.0
-	k8s.io/api v0.26.0
-	k8s.io/apiextensions-apiserver v0.26.0
-	k8s.io/apimachinery v0.26.0
-	k8s.io/client-go v0.26.0
+	go.uber.org/mock v0.3.0
+	go.uber.org/zap v1.26.0
+	k8s.io/api v0.28.4
+	k8s.io/apiextensions-apiserver v0.28.4
+	k8s.io/apimachinery v0.28.4
+	k8s.io/client-go v0.28.4
 )
 
 require (

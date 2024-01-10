@@ -756,7 +756,7 @@ issues:
         - gosec
         - typecheck
 
-    - path: go/pkg/mod
+    - path: go/pkg/mod/
       linters:
         - typecheck
 

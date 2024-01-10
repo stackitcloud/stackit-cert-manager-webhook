@@ -756,6 +756,10 @@ issues:
         - gosec
         - typecheck
 
+    - path: go/pkg/mod
+      linters:
+        - typecheck
+
     - path: include/       # for excluding directories, e.g., vendor directory
       linters:
         - nlreturn

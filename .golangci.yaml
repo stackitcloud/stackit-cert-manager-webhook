@@ -760,6 +760,10 @@ issues:
       linters:
         - typecheck
 
+    - path: opt/hostedtoolcache/
+      linters:
+        - typecheck
+
     - path: include/       # for excluding directories, e.g., vendor directory
       linters:
         - nlreturn

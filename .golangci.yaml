@@ -754,6 +754,7 @@ issues:
         - errcheck
         - dupl
         - gosec
+        - typecheck
 
     - path: include/       # for excluding directories, e.g., vendor directory
       linters:

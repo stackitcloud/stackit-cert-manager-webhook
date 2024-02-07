@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/antihax/optional v1.0.0
 	github.com/cert-manager/cert-manager v1.11.0
-	github.com/stackitcloud/stackit-dns-api-client-go v0.0.0-20230228185514-6838d6d6f051
+	github.com/stackitcloud/stackit-dns-api-client-go v0.0.0-20240207124424-bdfd0c2f7009
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/mock v0.2.0
 	go.uber.org/zap v1.25.0

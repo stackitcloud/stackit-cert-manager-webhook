@@ -6,7 +6,6 @@
 [![Cert Manager](https://img.shields.io/badge/cert--manager-1.11.0-blue?logo=cert-manager)](https://cert-manager.io/)
 [![Releases](https://img.shields.io/github/v/release/stackitcloud/stackit-cert-manager-webhook?include_prereleases)](https://github.com/stackitcloud/stackit-cert-manager-webhook/releases)
 [![CI](https://github.com/stackitcloud/stackit-cert-manager-webhook/actions/workflows/main.yml/badge.svg)](https://github.com/stackitcloud/stackit-cert-manager-webhook/actions/workflows/main.yml)
-[![Semgrep](https://github.com/stackitcloud/stackit-api-manager-cli/actions/workflows/semgrep.yml/badge.svg)](https://github.com/stackitcloud/stackit-cert-manager-webhook/actions/workflows/semgrep.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/stackitcloud/stackit-cert-manager-webhook)](https://goreportcard.com/report/github.com/stackitcloud/stackit-cert-manager-webhook)
 
 Facilitate a webhook integration for leveraging the STACKIT DNS alongside 

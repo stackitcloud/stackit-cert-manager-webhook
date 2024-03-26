@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/antihax/optional"
-	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
 var ErrZoneNotFound = fmt.Errorf("zone not found")
 
 //go:generate mockgen -destination=./mock/zone_repository.go -source=./zone_repository.go ZoneRepository
 type ZoneRepository interface {
-	FetchZone(ctx context.Context, zoneDnsName string) (*stackitdnsclient.DomainZone, error)
+	FetchZone(ctx context.Context, zoneDnsName string) (*stackitdnsclient.Zone, error)
 }
 
 //go:generate mockgen -destination=./mock/zone_repository.go -source=./zone_repository.go ZoneRepositoryFactory
@@ -31,7 +30,7 @@ type zoneRepositoryFactory struct{}
 func (z zoneRepositoryFactory) NewZoneRepository(
 	config Config,
 ) ZoneRepository {
-	apiClient := newStackitDnsClient(config)
+	apiClient, _ := newStackitDnsClient()
 
 	return &zoneRepository{
 		apiClient: apiClient,
@@ -46,24 +45,16 @@ func NewZoneRepositoryFactory() ZoneRepositoryFactory {
 func (z *zoneRepository) FetchZone(
 	ctx context.Context,
 	zoneDnsName string,
-) (*stackitdnsclient.DomainZone, error) {
-	queryParams := stackitdnsclient.ZoneApiV1ProjectsProjectIdZonesGetOpts{
-		ActiveEq:  optional.NewBool(true),
-		DnsNameEq: optional.NewString(strings.ToLower(zoneDnsName)),
-	}
+) (*stackitdnsclient.Zone, error) {
+	zoneResponse, err := z.apiClient.ListZones(ctx, z.projectId).ActiveEq(true).DnsNameEq(strings.ToLower(zoneDnsName)).Execute()
 
-	zoneResponse, _, err := z.apiClient.ZoneApi.V1ProjectsProjectIdZonesGet(
-		ctx,
-		z.projectId,
-		&queryParams,
-	)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(zoneResponse.Zones) == 0 {
+	if len(*zoneResponse.Zones) == 0 {
 		return nil, ErrZoneNotFound
 	}
 
-	return &zoneResponse.Zones[0], nil
+	return &(*zoneResponse.Zones)[0], nil
 }

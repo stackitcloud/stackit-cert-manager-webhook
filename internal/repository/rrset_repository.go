@@ -3,19 +3,17 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/antihax/optional"
-	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
 var ErrRRSetNotFound = fmt.Errorf("rrset not found")
 
 //go:generate mockgen -destination=./mock/rrset_repository.go -source=./rrset_repository.go RRSetRepository
 type RRSetRepository interface {
-	FetchRRSetForZone(ctx context.Context, rrSetName string, rrSetType string) (*stackitdnsclient.DomainRrSet, error)
-	CreateRRSet(ctx context.Context, rrSet stackitdnsclient.RrsetRrSetPost) error
-	UpdateRRSet(ctx context.Context, rrSet stackitdnsclient.DomainRrSet) error
+	FetchRRSetForZone(ctx context.Context, rrSetName string, rrSetType string) (*stackitdnsclient.RecordSet, error)
+	CreateRRSet(ctx context.Context, rrSet stackitdnsclient.RecordSet) error
+	UpdateRRSet(ctx context.Context, rrSet stackitdnsclient.RecordSet) error
 	DeleteRRSet(ctx context.Context, rrSetId string) error
 }
 
@@ -36,7 +34,7 @@ func (r rrSetRepositoryFactory) NewRRSetRepository(
 	config Config,
 	zoneId string,
 ) RRSetRepository {
-	apiClient := newStackitDnsClient(config)
+	apiClient, _ := newStackitDnsClient() // todo add fitting config
 
 	return &rrSetRepository{
 		apiClient: apiClient,
@@ -54,40 +52,41 @@ func (r *rrSetRepository) FetchRRSetForZone(
 	ctx context.Context,
 	rrSetName string,
 	rrSetType string,
-) (*stackitdnsclient.DomainRrSet, error) {
-	queryParams := stackitdnsclient.RecordSetApiV1ProjectsProjectIdZonesZoneIdRrsetsGetOpts{
-		ActiveEq: optional.NewBool(true),
-		NameEq:   optional.NewString(strings.ToLower(rrSetName)),
-		TypeEq:   optional.NewString(rrSetType),
-	}
+) (*stackitdnsclient.RecordSet, error) {
+	var pager int32 = 1
+	listRequest := r.apiClient.ListRecordSets(ctx, r.projectId, r.zoneId).
+		Page(pager).PageSize(10000).
+		ActiveEq(true).NameEq(rrSetName).TypeEq(rrSetType)
 
-	rrSetResponse, _, err := r.apiClient.RecordSetApi.V1ProjectsProjectIdZonesZoneIdRrsetsGet(
-		ctx,
-		r.projectId,
-		r.zoneId,
-		&queryParams,
-	)
+	rrSetResponse, err := listRequest.Execute()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(rrSetResponse.RrSets) == 0 {
+	if len(*rrSetResponse.RrSets) == 0 {
 		return nil, ErrRRSetNotFound
 	}
 
-	return &rrSetResponse.RrSets[0], nil
+	return &(*rrSetResponse.RrSets)[0], nil
 }
 
 func (r *rrSetRepository) CreateRRSet(
 	ctx context.Context,
-	rrSet stackitdnsclient.RrsetRrSetPost,
+	rrSet stackitdnsclient.RecordSet,
 ) error {
-	_, _, err := r.apiClient.RecordSetApi.V1ProjectsProjectIdZonesZoneIdRrsetsPost(
-		ctx,
-		rrSet,
-		r.projectId,
-		r.zoneId,
-	)
+	records := make([]stackitdnsclient.RecordPayload, len(*rrSet.Records))
+	for i, record := range *rrSet.Records {
+		records[i] = stackitdnsclient.RecordPayload{
+			Content: record.Content,
+		}
+	}
+	payload := stackitdnsclient.CreateRecordSetPayload{
+		Comment: rrSet.Comment,
+		Name:    rrSet.Name,
+		Ttl:     rrSet.Ttl,
+		Type:    rrSet.Type,
+	}
+	_, err := r.apiClient.CreateRecordSet(ctx, r.projectId, r.zoneId).CreateRecordSetPayload(payload).Execute()
 	if err != nil {
 		return err
 	}
@@ -97,28 +96,23 @@ func (r *rrSetRepository) CreateRRSet(
 
 func (r *rrSetRepository) UpdateRRSet(
 	ctx context.Context,
-	rrSet stackitdnsclient.DomainRrSet,
+	rrSet stackitdnsclient.RecordSet,
 ) error {
-	records := make([]stackitdnsclient.RrsetRecordPost, len(rrSet.Records))
-	for i, record := range rrSet.Records {
-		records[i] = stackitdnsclient.RrsetRecordPost{
+	records := make([]stackitdnsclient.RecordPayload, len(*rrSet.Records))
+	for i, record := range *rrSet.Records {
+		records[i] = stackitdnsclient.RecordPayload{
 			Content: record.Content,
 		}
 	}
-	rrSetBody := stackitdnsclient.RrsetRrSetPatch{
+	payload := stackitdnsclient.PartialUpdateRecordSetPayload{
 		Comment: rrSet.Comment,
 		Name:    rrSet.Name,
-		Records: records,
+		Records: &records,
 		Ttl:     rrSet.Ttl,
 	}
 
-	_, _, err := r.apiClient.RecordSetApi.V1ProjectsProjectIdZonesZoneIdRrsetsRrSetIdPatch(
-		ctx,
-		rrSetBody,
-		r.projectId,
-		r.zoneId,
-		rrSet.Id,
-	)
+	_, err := r.apiClient.PartialUpdateRecordSet(ctx, r.projectId, r.zoneId, *rrSet.Id).
+		PartialUpdateRecordSetPayload(payload).Execute()
 	if err != nil {
 		return err
 	}
@@ -127,17 +121,14 @@ func (r *rrSetRepository) UpdateRRSet(
 }
 
 func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error {
-	_, resp, err := r.apiClient.RecordSetApi.V1ProjectsProjectIdZonesZoneIdRrsetsRrSetIdDelete(
-		ctx,
-		r.projectId,
-		r.zoneId,
-		rrSetId,
-	)
-	if resp != nil {
-		if resp.StatusCode == 404 || resp.StatusCode == 400 {
-			return ErrRRSetNotFound
-		}
-	}
+	_, err := r.apiClient.DeleteRecordSet(ctx, r.projectId, r.zoneId, rrSetId).Execute()
+
+	// maybe check response here later
+	// if resp != nil {
+	// 	if resp.Message == 404 || resp.StatusCode == 400 {
+	// 		return ErrRRSetNotFound
+	// 	}
+	// }
 
 	return err
 }

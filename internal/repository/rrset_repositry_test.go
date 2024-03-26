@@ -5,7 +5,8 @@ import (
 	"testing"
 
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
-	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,7 +53,7 @@ func TestRrSetRepository_CreateRRSet(t *testing.T) {
 		t.Parallel()
 
 		rrSetRepository := rrSetRepositoryFactory.NewRRSetRepository(config, "0000")
-		err := rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RrsetRrSetPost{})
+		err := rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RecordSet{})
 		assert.NoError(t, err)
 	})
 
@@ -60,7 +61,7 @@ func TestRrSetRepository_CreateRRSet(t *testing.T) {
 		t.Parallel()
 
 		rrSetRepository := rrSetRepositoryFactory.NewRRSetRepository(config, "1111")
-		err := rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RrsetRrSetPost{})
+		err := rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RecordSet{})
 		assert.Error(t, err)
 	})
 }
@@ -73,15 +74,21 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 	t.Run("UpdateRRSet success", func(t *testing.T) {
 		t.Parallel()
 
+		comment := "test"
+		id := "0000"
+		name := "test.com."
+		ttl := int64(60)
+		content := "test"
+
 		rrSetRepository := rrSetRepositoryFactory.NewRRSetRepository(config, "2222")
 		err := rrSetRepository.UpdateRRSet(
 			ctx,
-			stackitdnsclient.DomainRrSet{
-				Comment: "test",
-				Id:      "0000",
-				Name:    "test.com.",
-				Ttl:     60,
-				Records: []stackitdnsclient.DomainRecord{{Content: "test"}},
+			stackitdnsclient.RecordSet{
+				Comment: &comment,
+				Id:      &id,
+				Name:    &name,
+				Ttl:     &ttl,
+				Records: &[]stackitdnsclient.Record{{Content: &content}},
 			},
 		)
 		assert.NoError(t, err)
@@ -90,15 +97,21 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 	t.Run("UpdateRRSet failure", func(t *testing.T) {
 		t.Parallel()
 
+		comment := "test"
+		id := "2222"
+		name := "test.com."
+		ttl := int64(60)
+		content := "test"
+
 		rrSetRepository := rrSetRepositoryFactory.NewRRSetRepository(config, "3333")
 		err := rrSetRepository.UpdateRRSet(
 			ctx,
-			stackitdnsclient.DomainRrSet{
-				Comment: "test",
-				Id:      "2222",
-				Name:    "test.com.",
-				Ttl:     60,
-				Records: []stackitdnsclient.DomainRecord{{Content: "test"}},
+			stackitdnsclient.RecordSet{
+				Comment: &comment,
+				Id:      &id,
+				Name:    &name,
+				Ttl:     &ttl,
+				Records: &[]stackitdnsclient.Record{{Content: &content}},
 			},
 		)
 		assert.Error(t, err)

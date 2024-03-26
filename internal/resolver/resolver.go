@@ -10,7 +10,7 @@ import (
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
-	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -149,7 +149,7 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 		return nil, "", err
 	}
 
-	rrSetRepository := s.rrSetRepositoryFactory.NewRRSetRepository(config, zone.Id)
+	rrSetRepository := s.rrSetRepositoryFactory.NewRRSetRepository(config, *zone.Id)
 
 	return rrSetRepository, rrSetName, nil
 }
@@ -172,16 +172,20 @@ func (s *stackitDnsProviderResolver) createRRSet(
 	repo repository.RRSetRepository,
 	rrSetName, key string,
 ) error {
-	rrSet := stackitdnsclient.RrsetRrSetPost{
-		Comment: "This record set is managed by stackit-cert-manager-webhook",
-		Name:    rrSetName,
-		Records: []stackitdnsclient.RrsetRecordPost{
+	comment := "This record set is managed by stackit-cert-manager-webhook"
+	ttl := int64(60)
+	rrSetType := typeTxtRecord
+
+	rrSet := stackitdnsclient.RecordSet{
+		Comment: &comment,
+		Name:    &rrSetName,
+		Records: &[]stackitdnsclient.Record{
 			{
-				Content: key,
+				Content: &key,
 			},
 		},
-		Ttl:   60,
-		Type_: typeTxtRecord,
+		Ttl:  &ttl,
+		Type: &rrSetType,
 	}
 
 	return repo.CreateRRSet(s.ctx, rrSet)
@@ -250,18 +254,18 @@ func (s *stackitDnsProviderResolver) handleFetchRRSetError(err error, rrSetName 
 
 func (s *stackitDnsProviderResolver) deleteRRSet(
 	rrSetRepository repository.RRSetRepository,
-	rrSet *stackitdnsclient.DomainRrSet,
+	rrSet *stackitdnsclient.RecordSet,
 	rrSetName string,
 ) error {
-	err := rrSetRepository.DeleteRRSet(s.ctx, rrSet.Id)
+	err := rrSetRepository.DeleteRRSet(s.ctx, *rrSet.Id)
 	if err != nil {
-		return s.handleDeleteRRSetError(err, rrSetName, rrSet.Id)
+		return s.handleDeleteRRSetError(err, rrSetName, *rrSet.Id)
 	}
 
 	s.logger.Info(
 		"RRSet deleted",
 		zap.String("rrSetName", rrSetName),
-		zap.String("rrSetId", rrSet.Id),
+		zap.String("rrSetId", *rrSet.Id),
 	)
 
 	return nil
@@ -314,7 +318,7 @@ func (s *stackitDnsProviderResolver) handleRRSetNotFound(
 
 func (s *stackitDnsProviderResolver) updateExistingRRSet(
 	rrSetRepository repository.RRSetRepository,
-	rrSet *stackitdnsclient.DomainRrSet,
+	rrSet *stackitdnsclient.RecordSet,
 	rrSetName string,
 ) error {
 	s.logger.Info("RRSet found, updating RRSet", zap.String("rrSetName", rrSetName))

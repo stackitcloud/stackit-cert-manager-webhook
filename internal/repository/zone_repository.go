@@ -55,7 +55,6 @@ func (z *zoneRepository) FetchZone(
 	zoneDnsName string,
 ) (*stackitdnsclient.Zone, error) {
 	zoneResponse, err := z.apiClient.ListZones(ctx, z.projectId).ActiveEq(true).DnsNameEq(strings.ToLower(zoneDnsName)).Execute()
-
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
-
 	"github.com/stretchr/testify/require"
 )
 

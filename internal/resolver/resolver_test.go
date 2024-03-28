@@ -12,7 +12,6 @@ import (
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver"
 	resolver_mock "github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver/mock"
 	stackitdnsclient_new "github.com/stackitcloud/stackit-sdk-go/services/dns"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"

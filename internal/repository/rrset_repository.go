@@ -8,8 +8,10 @@ import (
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
-var ErrRRSetNotFound = fmt.Errorf("rrset not found")
-var ErrEmptyRRSet = fmt.Errorf("empty rrset")
+var (
+	ErrRRSetNotFound = fmt.Errorf("rrset not found")
+	ErrEmptyRRSet    = fmt.Errorf("empty rrset")
+)
 
 //go:generate mockgen -destination=./mock/rrset_repository.go -source=./rrset_repository.go RRSetRepository
 type RRSetRepository interface {
@@ -139,7 +141,6 @@ func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error
 		if err.Error() == "404 Not Found, status code 404, Body: {\"message\":\"success\"}\n" ||
 			err.Error() == "400 Bad Request, status code 400, Body: {\"message\":\"success\"}\n" {
 			return ErrRRSetNotFound
-
 		}
 		return err
 	}

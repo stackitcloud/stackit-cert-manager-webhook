@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
 var ErrRRSetNotFound = fmt.Errorf("rrset not found")
+var ErrEmptyRRSet = fmt.Errorf("empty rrset")
 
 //go:generate mockgen -destination=./mock/rrset_repository.go -source=./rrset_repository.go RRSetRepository
 type RRSetRepository interface {
@@ -19,7 +21,7 @@ type RRSetRepository interface {
 
 //go:generate mockgen -destination=./mock/rrset_repository.go -source=./rrset_repository.go RRSetRepositoryFactory
 type RRSetRepositoryFactory interface {
-	NewRRSetRepository(config Config, zoneId string) RRSetRepository
+	NewRRSetRepository(config Config, zoneId string) (RRSetRepository, error)
 }
 
 type rrSetRepository struct {
@@ -33,14 +35,21 @@ type rrSetRepositoryFactory struct{}
 func (r rrSetRepositoryFactory) NewRRSetRepository(
 	config Config,
 	zoneId string,
-) RRSetRepository {
-	apiClient, _ := newStackitDnsClient() // todo add fitting config
+) (RRSetRepository, error) {
+	apiClient, err := newStackitDnsClient(
+		stackitconfig.WithToken(config.AuthToken),
+		stackitconfig.WithHTTPClient(config.HttpClient),
+		stackitconfig.WithEndpoint(config.ApiBasePath),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &rrSetRepository{
 		apiClient: apiClient,
 		projectId: config.ProjectId,
 		zoneId:    zoneId,
-	}
+	}, nil
 }
 
 func NewRRSetRepositoryFactory() RRSetRepositoryFactory {
@@ -74,10 +83,13 @@ func (r *rrSetRepository) CreateRRSet(
 	ctx context.Context,
 	rrSet stackitdnsclient.RecordSet,
 ) error {
-	records := make([]stackitdnsclient.RecordPayload, len(*rrSet.Records))
-	for i, record := range *rrSet.Records {
-		records[i] = stackitdnsclient.RecordPayload{
-			Content: record.Content,
+	var records []stackitdnsclient.RecordPayload
+	if rrSet.Records != nil {
+		records = make([]stackitdnsclient.RecordPayload, len(*rrSet.Records))
+		for i, record := range *rrSet.Records {
+			records[i] = stackitdnsclient.RecordPayload{
+				Content: record.Content,
+			}
 		}
 	}
 	payload := stackitdnsclient.CreateRecordSetPayload{
@@ -85,6 +97,7 @@ func (r *rrSetRepository) CreateRRSet(
 		Name:    rrSet.Name,
 		Ttl:     rrSet.Ttl,
 		Type:    rrSet.Type,
+		Records: &records,
 	}
 	_, err := r.apiClient.CreateRecordSet(ctx, r.projectId, r.zoneId).CreateRecordSetPayload(payload).Execute()
 	if err != nil {
@@ -122,13 +135,14 @@ func (r *rrSetRepository) UpdateRRSet(
 
 func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error {
 	_, err := r.apiClient.DeleteRecordSet(ctx, r.projectId, r.zoneId, rrSetId).Execute()
+	if err != nil {
+		if err.Error() == "404 Not Found, status code 404, Body: {\"message\":\"success\"}\n" ||
+			err.Error() == "400 Bad Request, status code 400, Body: {\"message\":\"success\"}\n" {
+			return ErrRRSetNotFound
 
-	// maybe check response here later
-	// if resp != nil {
-	// 	if resp.Message == 404 || resp.StatusCode == 400 {
-	// 		return ErrRRSetNotFound
-	// 	}
-	// }
+		}
+		return err
+	}
 
 	return err
 }

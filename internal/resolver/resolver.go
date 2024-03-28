@@ -143,14 +143,19 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 	config := s.getRepositoryConfig(cfg, authToken)
 
 	zoneDnsName, rrSetName := getZoneDnsNameAndRRSetName(ch)
-	zoneRepository := s.zoneRepositoryFactory.NewZoneRepository(config)
+	zoneRepository, err := s.zoneRepositoryFactory.NewZoneRepository(config)
+	if err != nil {
+		return nil, "", err
+	}
 	zone, err := zoneRepository.FetchZone(s.ctx, zoneDnsName)
 	if err != nil {
 		return nil, "", err
 	}
 
-	rrSetRepository := s.rrSetRepositoryFactory.NewRRSetRepository(config, *zone.Id)
-
+	rrSetRepository, err := s.rrSetRepositoryFactory.NewRRSetRepository(config, *zone.Id)
+	if err != nil {
+		return nil, "", err
+	}
 	return rrSetRepository, rrSetName, nil
 }
 

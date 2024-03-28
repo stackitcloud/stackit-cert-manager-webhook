@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
@@ -17,7 +18,7 @@ type ZoneRepository interface {
 
 //go:generate mockgen -destination=./mock/zone_repository.go -source=./zone_repository.go ZoneRepositoryFactory
 type ZoneRepositoryFactory interface {
-	NewZoneRepository(config Config) ZoneRepository
+	NewZoneRepository(config Config) (ZoneRepository, error)
 }
 
 type zoneRepository struct {
@@ -29,13 +30,20 @@ type zoneRepositoryFactory struct{}
 
 func (z zoneRepositoryFactory) NewZoneRepository(
 	config Config,
-) ZoneRepository {
-	apiClient, _ := newStackitDnsClient()
+) (ZoneRepository, error) {
+	apiClient, err := newStackitDnsClient(
+		stackitconfig.WithToken(config.AuthToken),
+		stackitconfig.WithHTTPClient(config.HttpClient),
+		stackitconfig.WithEndpoint(config.ApiBasePath),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &zoneRepository{
 		apiClient: apiClient,
 		projectId: config.ProjectId,
-	}
+	}, nil
 }
 
 func NewZoneRepositoryFactory() ZoneRepositoryFactory {

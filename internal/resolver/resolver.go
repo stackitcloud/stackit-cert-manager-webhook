@@ -262,6 +262,9 @@ func (s *stackitDnsProviderResolver) deleteRRSet(
 	rrSet *stackitdnsclient.RecordSet,
 	rrSetName string,
 ) error {
+	if rrSet == nil {
+		return nil
+	}
 	err := rrSetRepository.DeleteRRSet(s.ctx, *rrSet.Id)
 	if err != nil {
 		return s.handleDeleteRRSetError(err, rrSetName, *rrSet.Id)

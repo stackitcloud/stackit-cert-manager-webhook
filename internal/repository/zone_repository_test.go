@@ -43,8 +43,6 @@ func TestZoneRepository_FetchZone(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			zoneRepository := createZoneRepo(tc.projectID)
 			zone, err := zoneRepository.FetchZone(ctx, "test-zone")
 

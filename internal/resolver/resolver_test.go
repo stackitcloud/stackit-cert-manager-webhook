@@ -11,7 +11,8 @@ import (
 	repository_mock "github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository/mock"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver"
 	resolver_mock "github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver/mock"
-	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	stackitdnsclient_new "github.com/stackitcloud/stackit-sdk-go/services/dns"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -135,7 +136,7 @@ func (s *presentSuite) TestFailFetchZone() {
 		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
+		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
 		Return(nil, fmt.Errorf("error fetching zone"))
@@ -158,13 +159,13 @@ func (s *presentSuite) TestFailFetchRRSet() {
 		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
+		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+		Return(s.mockRRSetRepository, nil)
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, fmt.Errorf("error fetching rr set"))
@@ -187,13 +188,13 @@ func (s *presentSuite) TestSuccessCreateRRSet() {
 		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
+		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+		Return(s.mockRRSetRepository, nil)
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, repository.ErrRRSetNotFound)
@@ -214,16 +215,16 @@ func (s *presentSuite) TestSuccessUpdateRRSet() {
 		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
+		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+		Return(s.mockRRSetRepository, nil)
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainRrSet{}, nil)
+		Return(&stackitdnsclient_new.RecordSet{}, nil)
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), gomock.Any()).
 		Return(nil)
@@ -254,13 +255,13 @@ func (s *cleanSuite) setupCommonMocks() {
 		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository)
+		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainZone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository)
+		Return(s.mockRRSetRepository, nil)
 }
 
 func (s *cleanSuite) TestFailFetchRRSet() {
@@ -290,11 +291,14 @@ func (s *cleanSuite) TestFailFetchNoRRSet() {
 
 func (s *cleanSuite) TestFailDeleteNoRRSet() {
 	s.setupCommonMocks()
+	rrset := stackitdnsclient_new.RecordSet{
+		Id: toPtr("1234"),
+	}
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainRrSet{}, nil)
+		Return(&rrset, nil)
 	s.mockRRSetRepository.EXPECT().
-		DeleteRRSet(gomock.Any(), gomock.Any()).
+		DeleteRRSet(gomock.Any(), *rrset.Id).
 		Return(repository.ErrRRSetNotFound)
 
 	err := s.resolver.CleanUp(challengeRequest)
@@ -303,11 +307,14 @@ func (s *cleanSuite) TestFailDeleteNoRRSet() {
 
 func (s *cleanSuite) TestFailDeleteRRSet() {
 	s.setupCommonMocks()
+	rrset := stackitdnsclient_new.RecordSet{
+		Id: toPtr("1234"),
+	}
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainRrSet{}, nil)
+		Return(&rrset, nil)
 	s.mockRRSetRepository.EXPECT().
-		DeleteRRSet(gomock.Any(), gomock.Any()).
+		DeleteRRSet(gomock.Any(), *rrset.Id).
 		Return(fmt.Errorf("error deleting rr set"))
 
 	err := s.resolver.CleanUp(challengeRequest)
@@ -321,13 +328,20 @@ func (s *cleanSuite) TestFailDeleteRRSet() {
 
 func (s *cleanSuite) TestSuccessDeleteRRSet() {
 	s.setupCommonMocks()
+	rrset := stackitdnsclient_new.RecordSet{
+		Id: toPtr("1234"),
+	}
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient.DomainRrSet{}, nil)
+		Return(&rrset, nil)
 	s.mockRRSetRepository.EXPECT().
-		DeleteRRSet(gomock.Any(), gomock.Any()).
+		DeleteRRSet(gomock.Any(), *rrset.Id).
 		Return(nil)
 
 	err := s.resolver.CleanUp(challengeRequest)
 	s.NoError(err)
+}
+
+func toPtr(str string) *string {
+	return &str
 }

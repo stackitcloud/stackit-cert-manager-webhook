@@ -18,8 +18,6 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
 	t.Run("FetchRRSetForZone success", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		rrSet, err := rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
@@ -28,8 +26,6 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 	})
 
 	t.Run("FetchRRSetForZone failure", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "5678")
 		require.NoError(t, err)
 		_, err = rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
@@ -37,8 +33,6 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 	})
 
 	t.Run("FetchRRSetForZone not found", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "9999")
 		require.NoError(t, err)
 		_, err = rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
@@ -53,8 +47,6 @@ func TestRrSetRepository_CreateRRSet(t *testing.T) {
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
 	t.Run("CreateRRSet success", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "0000")
 		require.NoError(t, err)
 		err = rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RecordSet{})
@@ -62,8 +54,6 @@ func TestRrSetRepository_CreateRRSet(t *testing.T) {
 	})
 
 	t.Run("CreateRRSet failure", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1111")
 		require.NoError(t, err)
 		err = rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RecordSet{})
@@ -77,8 +67,6 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
 	t.Run("UpdateRRSet success", func(t *testing.T) {
-		t.Parallel()
-
 		comment := "test"
 		id := "0000"
 		name := "test.com."
@@ -101,8 +89,6 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 	})
 
 	t.Run("UpdateRRSet failure", func(t *testing.T) {
-		t.Parallel()
-
 		comment := "test"
 		id := "2222"
 		name := "test.com."
@@ -131,8 +117,6 @@ func TestRrSetRepository_DeleteRRSet(t *testing.T) {
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
 	t.Run("DeleteRRSet success", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "2222")
@@ -140,8 +124,6 @@ func TestRrSetRepository_DeleteRRSet(t *testing.T) {
 	})
 
 	t.Run("DeleteRRSet failure", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "3333")
@@ -149,8 +131,6 @@ func TestRrSetRepository_DeleteRRSet(t *testing.T) {
 	})
 
 	t.Run("DeleteRRSet 400 return", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "4444")
@@ -159,8 +139,6 @@ func TestRrSetRepository_DeleteRRSet(t *testing.T) {
 	})
 
 	t.Run("DeleteRRSet 404 return", func(t *testing.T) {
-		t.Parallel()
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "5555")

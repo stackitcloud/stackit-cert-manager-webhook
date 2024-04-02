@@ -154,6 +154,7 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 	if err != nil {
 		return nil, "", err
 	}
+
 	return rrSetRepository, rrSetName, nil
 }
 
@@ -198,7 +199,7 @@ func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig)
 	return token, nil
 }
 
-// geSaKeyPath gets the Service Account Key Path from the environment
+// geSaKeyPath gets the Service Account Key Path from the environment.
 func (s *stackitDnsProviderResolver) getSaKeyPath() string {
 	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
 }

@@ -137,6 +137,7 @@ func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error
 			err.Error() == "400 Bad Request, status code 400, Body: {\"message\":\"success\"}\n" {
 			return ErrRRSetNotFound
 		}
+
 		return err
 	}
 

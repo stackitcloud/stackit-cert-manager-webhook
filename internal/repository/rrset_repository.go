@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
@@ -38,11 +37,7 @@ func (r rrSetRepositoryFactory) NewRRSetRepository(
 	config Config,
 	zoneId string,
 ) (RRSetRepository, error) {
-	apiClient, err := newStackitDnsClient(
-		stackitconfig.WithToken(config.AuthToken),
-		stackitconfig.WithHTTPClient(config.HttpClient),
-		stackitconfig.WithEndpoint(config.ApiBasePath),
-	)
+	apiClient, err := chooseNewStackitDnsClient(config)
 	if err != nil {
 		return nil, err
 	}

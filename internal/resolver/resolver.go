@@ -135,12 +135,10 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 		return nil, "", err
 	}
 
-	authToken, err := s.getAuthToken(&cfg)
+	config, err := s.getRepositoryConfig(&cfg)
 	if err != nil {
 		return nil, "", err
 	}
-
-	config := s.getRepositoryConfig(cfg, authToken)
 
 	zoneDnsName, rrSetName := getZoneDnsNameAndRRSetName(ch)
 	zoneRepository, err := s.zoneRepositoryFactory.NewZoneRepository(config)
@@ -157,20 +155,6 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 		return nil, "", err
 	}
 	return rrSetRepository, rrSetName, nil
-}
-
-func (s *stackitDnsProviderResolver) getRepositoryConfig(
-	cfg StackitDnsProviderConfig,
-	authToken string,
-) repository.Config {
-	config := repository.Config{
-		ApiBasePath: cfg.ApiBasePath,
-		AuthToken:   authToken,
-		ProjectId:   cfg.ProjectId,
-		HttpClient:  s.httpClient,
-	}
-
-	return config
 }
 
 func (s *stackitDnsProviderResolver) createRRSet(
@@ -212,6 +196,38 @@ func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig)
 	}
 
 	return token, nil
+}
+
+// geSaKeyPath gets the Service Account Key Path from the environment
+func (s *stackitDnsProviderResolver) getSaKeyPath() string {
+	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
+}
+
+func (s *stackitDnsProviderResolver) checkUseSaAuthentication() bool {
+	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH") != ""
+}
+
+func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProviderConfig) (repository.Config, error) {
+	config := repository.Config{
+		ApiBasePath: cfg.ApiBasePath,
+		ProjectId:   cfg.ProjectId,
+		HttpClient:  s.httpClient,
+		UseSaKey:    false,
+	}
+
+	switch {
+	case s.checkUseSaAuthentication():
+		config.SaKeyPath = s.getSaKeyPath()
+		config.UseSaKey = true
+	default:
+		authToken, err := s.getAuthToken(cfg)
+		if err != nil {
+			return config, err
+		}
+		config.AuthToken = authToken
+	}
+
+	return config, nil
 }
 
 func getZoneDnsNameAndRRSetName(ch *v1alpha1.ChallengeRequest) (string, string) {

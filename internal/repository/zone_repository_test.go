@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//nolint:tparallel // sdk has data races in parallel testing
 func TestZoneRepository_FetchZone(t *testing.T) {
 	t.Parallel()
 
@@ -42,11 +41,11 @@ func TestZoneRepository_FetchZone(t *testing.T) {
 		{"failure zone not found", "0000", true, repository.ErrZoneNotFound, ""},
 	}
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	for _, tc := range testCases {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			zoneRepository := createZoneRepo(tc.projectID)
 			zone, err := zoneRepository.FetchZone(ctx, "test-zone")
 

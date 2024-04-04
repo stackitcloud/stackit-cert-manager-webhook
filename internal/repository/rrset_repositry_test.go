@@ -11,13 +11,11 @@ import (
 
 const rrSetTypeTxt = "TXT"
 
-//nolint:tparallel // sdk has data races in parallel testing
 func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 	t.Parallel()
 
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("FetchRRSetForZone success", func(t *testing.T) {
 		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
@@ -27,7 +25,6 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 		require.Equal(t, *rrSet.Id, "1234")
 	})
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("FetchRRSetForZone failure", func(t *testing.T) {
 		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "5678")
@@ -36,7 +33,6 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("FetchRRSetForZone not found", func(t *testing.T) {
 		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "9999")
@@ -47,22 +43,21 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 	})
 }
 
-//nolint:tparallel // sdk has data races in parallel testing
 func TestRrSetRepository_CreateRRSet(t *testing.T) {
 	t.Parallel()
 
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("CreateRRSet success", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "0000")
 		require.NoError(t, err)
 		err = rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RecordSet{})
 		require.NoError(t, err)
 	})
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("CreateRRSet failure", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1111")
 		require.NoError(t, err)
 		err = rrSetRepository.CreateRRSet(ctx, stackitdnsclient.RecordSet{})
@@ -70,14 +65,13 @@ func TestRrSetRepository_CreateRRSet(t *testing.T) {
 	})
 }
 
-//nolint:tparallel // sdk has data races in parallel testing
 func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 	t.Parallel()
 
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("UpdateRRSet success", func(t *testing.T) {
+		t.Parallel()
 		comment := "comment1"
 		id := "0000"
 		name := "test.com."
@@ -99,8 +93,8 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("UpdateRRSet failure", func(t *testing.T) {
+		t.Parallel()
 		comment := "comment2"
 		id := "2222"
 		name := "test.com."
@@ -123,30 +117,29 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 	})
 }
 
-//nolint:tparallel // sdk has data races in parallel testing
 func TestRrSetRepository_DeleteRRSet(t *testing.T) {
 	t.Parallel()
 
 	ctx, config, rrSetRepositoryFactory := setupRRSetRepositoryTests(t)
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("DeleteRRSet success", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "2222")
 		require.NoError(t, err)
 	})
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("DeleteRRSet failure", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "3333")
 		require.Error(t, err)
 	})
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("DeleteRRSet 400 return", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "4444")
@@ -154,8 +147,8 @@ func TestRrSetRepository_DeleteRRSet(t *testing.T) {
 		require.ErrorIs(t, err, repository.ErrRRSetNotFound)
 	})
 
-	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("DeleteRRSet 404 return", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		err = rrSetRepository.DeleteRRSet(ctx, "5555")

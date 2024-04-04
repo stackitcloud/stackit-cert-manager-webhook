@@ -200,12 +200,16 @@ func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig)
 }
 
 // geSaKeyPath gets the Service Account Key Path from the environment.
-func (s *stackitDnsProviderResolver) getSaKeyPath() string {
+func (s *stackitDnsProviderResolver) getSaKeyPath(cfg *StackitDnsProviderConfig) string {
+	if cfg.ServiceAccountKeyPath != "" {
+		return cfg.ServiceAccountKeyPath
+	}
+
 	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
 }
 
-func (s *stackitDnsProviderResolver) checkUseSaAuthentication() bool {
-	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH") != ""
+func (s *stackitDnsProviderResolver) checkUseSaAuthentication(cfg *StackitDnsProviderConfig) bool {
+	return s.getSaKeyPath(cfg) != ""
 }
 
 func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProviderConfig) (repository.Config, error) {
@@ -217,8 +221,8 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProvider
 	}
 
 	switch {
-	case s.checkUseSaAuthentication():
-		config.SaKeyPath = s.getSaKeyPath()
+	case s.checkUseSaAuthentication(cfg):
+		config.SaKeyPath = s.getSaKeyPath(cfg)
 		config.UseSaKey = true
 	default:
 		authToken, err := s.getAuthToken(cfg)

@@ -22,6 +22,8 @@ func newStackitDnsClientBearerToken(config Config) (*stackitdnsclient.APIClient,
 func newStackitDnsClientKeyPath(config Config) (*stackitdnsclient.APIClient, error) {
 	return newStackitDnsClient(
 		stackitconfig.WithServiceAccountKeyPath(config.SaKeyPath),
+		stackitconfig.WithHTTPClient(config.HttpClient),
+		stackitconfig.WithEndpoint(config.ApiBasePath),
 	)
 }
 

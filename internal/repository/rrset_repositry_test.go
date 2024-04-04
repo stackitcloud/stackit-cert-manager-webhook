@@ -19,6 +19,7 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 
 	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("FetchRRSetForZone success", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
 		rrSet, err := rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
@@ -28,6 +29,7 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 
 	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("FetchRRSetForZone failure", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "5678")
 		require.NoError(t, err)
 		_, err = rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
@@ -36,6 +38,7 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 
 	//nolint:paralleltest // sdk has data races in parallel testing
 	t.Run("FetchRRSetForZone not found", func(t *testing.T) {
+		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "9999")
 		require.NoError(t, err)
 		_, err = rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)

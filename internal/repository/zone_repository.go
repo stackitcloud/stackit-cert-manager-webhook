@@ -31,9 +31,11 @@ type zoneRepositoryFactory struct{}
 func (z zoneRepositoryFactory) NewZoneRepository(
 	config Config,
 ) (ZoneRepository, error) {
+	httpClient := *config.HttpClient
+
 	apiClient, err := newStackitDnsClient(
 		stackitconfig.WithToken(config.AuthToken),
-		stackitconfig.WithHTTPClient(config.HttpClient),
+		stackitconfig.WithHTTPClient(&httpClient),
 		stackitconfig.WithEndpoint(config.ApiBasePath),
 	)
 	if err != nil {

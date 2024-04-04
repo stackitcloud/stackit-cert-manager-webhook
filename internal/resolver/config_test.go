@@ -137,9 +137,14 @@ func TestDefaultConfigProvider_LoadConfigNamespaceFile(t *testing.T) {
 	})
 }
 
+//nolint:paralleltest // changing env may lead to data races in parallel testing
 func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
+	saKeyPath := "/path/to/sa/key"
 
-	saKeyPath = "/path/to/sa/key"
+	t.Setenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH", saKeyPath)
+	defer func() {
+		t.Setenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH", "")
+	}()
 
 	r := &stackitDnsProviderResolver{
 		httpClient: &http.Client{},
@@ -157,9 +162,15 @@ func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
 	require.True(t, config.UseSaKey)
 }
 
+//nolint:paralleltest // changing env may lead to data races in parallel testing
 func TestGetRepositoryConfig_NoEnvSet(t *testing.T) {
-	saKeyPath = ""             // global variable from resolver.go
+	oldAuthToken := stackitAuthToken
 	stackitAuthToken = "token" // global variable from resolver.go
+
+	t.Setenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH", "")
+	defer func() {
+		stackitAuthToken = oldAuthToken
+	}()
 
 	s := NewSecretFetcher()
 	r := &stackitDnsProviderResolver{

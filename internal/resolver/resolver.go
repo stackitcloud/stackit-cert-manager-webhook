@@ -19,7 +19,6 @@ import (
 const typeTxtRecord = "TXT"
 
 var stackitAuthToken = os.Getenv("STACKIT_AUTH_TOKEN")
-var saKeyPath = os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
 
 func NewResolver(
 	httpClient *http.Client,
@@ -202,11 +201,11 @@ func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig)
 
 // geSaKeyPath gets the Service Account Key Path from the environment.
 func (s *stackitDnsProviderResolver) getSaKeyPath() string {
-	return saKeyPath
+	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
 }
 
 func (s *stackitDnsProviderResolver) checkUseSaAuthentication() bool {
-	return saKeyPath != ""
+	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH") != ""
 }
 
 func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProviderConfig) (repository.Config, error) {

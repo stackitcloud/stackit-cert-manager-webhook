@@ -24,6 +24,7 @@ type StackitDnsProviderConfig struct {
 	AuthTokenSecretRef       string `json:"authTokenSecretRef"`
 	AuthTokenSecretKey       string `json:"authTokenSecretKey"`
 	AuthTokenSecretNamespace string `json:"authTokenSecretNamespace"`
+	ServiceAccountKeyPath    string `json:"serviceAccountKeyPath"`
 }
 
 func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProviderConfig, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
@@ -132,13 +133,11 @@ func (r *rrSetRepository) UpdateRRSet(
 
 func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error {
 	_, err := r.apiClient.DeleteRecordSet(ctx, r.projectId, r.zoneId, rrSetId).Execute()
-	if err != nil {
-		if err.Error() == "404 Not Found, status code 404, Body: {\"message\":\"success\"}\n" ||
-			err.Error() == "400 Bad Request, status code 400, Body: {\"message\":\"success\"}\n" {
+
+	if apiErr, ok := err.(*oapierror.GenericOpenAPIError); ok {
+		if apiErr.StatusCode == 404 || apiErr.StatusCode == 400 {
 			return ErrRRSetNotFound
 		}
-
-		return err
 	}
 
 	return err

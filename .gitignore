@@ -23,4 +23,5 @@ go.work
 out/
 bin/
 stackit-cert-manager-webhook-0.1.0.tgz
+stackit-cert-manager-webhook-0.1.*
 index.yaml

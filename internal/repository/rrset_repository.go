@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -133,10 +134,12 @@ func (r *rrSetRepository) UpdateRRSet(
 
 func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error {
 	_, err := r.apiClient.DeleteRecordSet(ctx, r.projectId, r.zoneId, rrSetId).Execute()
-
-	if apiErr, ok := err.(*oapierror.GenericOpenAPIError); ok {
-		if apiErr.StatusCode == 404 || apiErr.StatusCode == 400 {
-			return ErrRRSetNotFound
+	if err != nil {
+		var oapiError *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiError) {
+			if oapiError.StatusCode == 404 || oapiError.StatusCode == 400 {
+				return ErrRRSetNotFound
+			}
 		}
 	}
 

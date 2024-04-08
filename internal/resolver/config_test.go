@@ -1,12 +1,14 @@
 package resolver
 
 import (
+	"net/http"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -133,4 +135,57 @@ func TestDefaultConfigProvider_LoadConfigNamespaceFile(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to find the webhook pod namespace")
 	})
+}
+
+//nolint:paralleltest // changing env may lead to data races in parallel testing
+func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
+	saKeyPath := "/path/to/sa/key"
+
+	t.Setenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH", saKeyPath)
+	defer func() {
+		t.Setenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH", "")
+	}()
+
+	r := &stackitDnsProviderResolver{
+		httpClient: &http.Client{},
+	}
+
+	cfg := &StackitDnsProviderConfig{
+		ApiBasePath: "https://api.stackit.cloud",
+		ProjectId:   "test-project",
+	}
+
+	config, err := r.getRepositoryConfig(cfg)
+
+	require.NoError(t, err)
+	require.Equal(t, saKeyPath, config.SaKeyPath)
+	require.True(t, config.UseSaKey)
+}
+
+//nolint:paralleltest // changing env may lead to data races in parallel testing
+func TestGetRepositoryConfig_NoEnvSet(t *testing.T) {
+	oldAuthToken := stackitAuthToken
+	stackitAuthToken = "token" // global variable from resolver.go
+
+	t.Setenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH", "")
+	defer func() {
+		stackitAuthToken = oldAuthToken
+	}()
+
+	s := NewSecretFetcher()
+	r := &stackitDnsProviderResolver{
+		httpClient:    &http.Client{},
+		secretFetcher: s,
+	}
+
+	cfg := &StackitDnsProviderConfig{
+		ApiBasePath: "https://api.stackit.cloud",
+		ProjectId:   "test-project",
+	}
+
+	config, err := r.getRepositoryConfig(cfg)
+
+	require.NoError(t, err)
+	require.False(t, config.UseSaKey)
+	require.Equal(t, stackitAuthToken, config.AuthToken)
 }

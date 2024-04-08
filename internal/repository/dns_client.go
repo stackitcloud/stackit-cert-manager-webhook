@@ -1,18 +1,41 @@
 package repository
 
 import (
-	"fmt"
-
-	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
 func newStackitDnsClient(
-	config Config,
-) *stackitdnsclient.APIClient {
-	configClient := stackitdnsclient.NewConfiguration()
-	configClient.DefaultHeader["Authorization"] = fmt.Sprintf("Bearer %s", config.AuthToken)
-	configClient.BasePath = config.ApiBasePath
-	configClient.HTTPClient = config.HttpClient
+	stackitConfig ...stackitconfig.ConfigurationOption,
+) (*stackitdnsclient.APIClient, error) {
+	return stackitdnsclient.NewAPIClient(stackitConfig...)
+}
 
-	return stackitdnsclient.NewAPIClient(configClient)
+func newStackitDnsClientBearerToken(config Config) (*stackitdnsclient.APIClient, error) {
+	httpClient := *config.HttpClient
+
+	return newStackitDnsClient(
+		stackitconfig.WithToken(config.AuthToken),
+		stackitconfig.WithHTTPClient(&httpClient),
+		stackitconfig.WithEndpoint(config.ApiBasePath),
+	)
+}
+
+func newStackitDnsClientKeyPath(config Config) (*stackitdnsclient.APIClient, error) {
+	httpClient := *config.HttpClient
+
+	return newStackitDnsClient(
+		stackitconfig.WithServiceAccountKeyPath(config.SaKeyPath),
+		stackitconfig.WithHTTPClient(&httpClient),
+		stackitconfig.WithEndpoint(config.ApiBasePath),
+	)
+}
+
+func chooseNewStackitDnsClient(config Config) (*stackitdnsclient.APIClient, error) {
+	switch {
+	case config.UseSaKey:
+		return newStackitDnsClientKeyPath(config)
+	default:
+		return newStackitDnsClientBearerToken(config)
+	}
 }

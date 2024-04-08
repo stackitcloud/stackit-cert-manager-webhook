@@ -22,6 +22,12 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
+stackitSaAuthentication:
+  enabled: false
+  secretName: stackit-sa-authentication
+  fileName: sa.json
+  mountPath: /var/run/secrets/stackit
+
 service:
   type: ClusterIP
   port: 443

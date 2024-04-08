@@ -6,6 +6,7 @@ import (
 
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestZoneRepository_FetchZone(t *testing.T) {
@@ -22,8 +23,10 @@ func TestZoneRepository_FetchZone(t *testing.T) {
 			ProjectId:   projectID,
 			HttpClient:  server.Client(),
 		}
+		zoneRepository, err := repository.NewZoneRepositoryFactory().NewZoneRepository(config)
+		require.NoError(t, err)
 
-		return repository.NewZoneRepositoryFactory().NewZoneRepository(config)
+		return zoneRepository
 	}
 
 	testCases := []struct {
@@ -40,9 +43,9 @@ func TestZoneRepository_FetchZone(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-
 			zoneRepository := createZoneRepo(tc.projectID)
 			zone, err := zoneRepository.FetchZone(ctx, "test-zone")
 
@@ -53,7 +56,7 @@ func TestZoneRepository_FetchZone(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedID, zone.Id)
+				assert.Equal(t, tc.expectedID, *zone.Id)
 			}
 		})
 	}

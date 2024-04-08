@@ -32,6 +32,10 @@ spec:
           env:
             - name: GROUP_NAME
               value: {{ .Values.groupName | quote }}
+          {{- if .Values.stackitSaAuthentication.enabled }}
+            - name: STACKIT_SERVICE_ACCOUNT_KEY_PATH
+              value: "{{ .Values.stackitSaAuthentication.mountPath}}/{{ .Values.stackitSaAuthentication.fileName}}"
+          {{- end }}
           ports:
             - name: https
               containerPort: 8443
@@ -54,12 +58,22 @@ spec:
             - name: certs
               mountPath: /tls
               readOnly: true
+          {{- if .Values.stackitSaAuthentication.enabled }}
+            - name: stackit-sa-authentication
+              mountPath: {{ .Values.stackitSaAuthentication.mountPath }}
+              readOnly: true
+          {{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:
         - name: certs
           secret:
             secretName: {{ include "stackit-cert-manager-webhook.servingCertificate" . }}
+      {{- if .Values.stackitSaAuthentication.enabled }}
+        - name: stackit-sa-authentication
+          secret:
+            secretName: {{ .Values.stackitSaAuthentication.secretName }}
+      {{- end }}
     {{- with .Values.podSecurityContext }}
       securityContext:
 {{ toYaml . | indent 8 }}

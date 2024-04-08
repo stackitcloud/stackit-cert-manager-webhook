@@ -7,4 +7,6 @@ type Config struct {
 	AuthToken   string
 	ProjectId   string
 	HttpClient  *http.Client
+	SaKeyPath   string
+	UseSaKey    bool
 }

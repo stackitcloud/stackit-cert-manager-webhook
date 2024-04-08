@@ -16,7 +16,7 @@ ACME Issuer with [cert-manager](https://cert-manager.io/docs/).
 ```bash
 helm install stackit-cert-manager-webhook \
   --namespace cert-manager \
-  https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.1.1/stackit-cert-manager-webhook-v0.1.1.tgz
+  https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.1.2/stackit-cert-manager-webhook-v0.1.2.tgz
 ```
 
 ## Usage
@@ -25,6 +25,34 @@ helm install stackit-cert-manager-webhook \
     kubectl create secret generic stackit-cert-manager-webhook \
       --namespace=cert-manager \
       --from-literal=auth-token=<STACKIT AUTH TOKEN>
+    ```
+   Or alternatively we can utilize the STACKIT service account path authentication:
+      ```
+    kubectl create secret generic stackit-sa-authentication -n cert-manager \
+        --from-literal=sa.json='{
+      "id": "4e1fe486-b463-4bcd-9210-288854268e34",
+      "publicKey": "-----BEGIN PUBLIC KEY-----\nPUBLIC_KEY\n-----END PUBLIC KEY-----",
+      "createdAt": "2024-04-02T13:12:17.678+00:00",
+      "validUntil": "2024-04-15T22:00:00.000+00:00",
+      "keyType": "USER_MANAGED",
+      "keyOrigin": "GENERATED",
+      "keyAlgorithm": "RSA_2048",
+      "active": true,
+      "credentials": {
+        "kid": "kid",
+        "iss": "iss",
+        "sub": "sub",
+        "aud": "aud",
+        "privateKey": "-----BEGIN PRIVATE KEY-----\nPRIVATE-KEY==\n-----END PRIVATE KEY-----"
+      }
+    }'
+    ```
+     You now need to adjust the deployment via helm to use the secret:
+    ```bash
+    helm upgrade stackit-cert-manager-webhook \
+      --namespace cert-manager \
+      https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.1.2/stackit-cert-manager-webhook-v0.1.2.tgz \
+     --set stackitSaAuthentication.enabled=true
     ```
 
 2. ***Configuration of ClusterIssuer/Issuer:***   

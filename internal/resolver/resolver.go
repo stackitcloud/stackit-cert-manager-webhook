@@ -10,7 +10,7 @@ import (
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
-	stackitdnsclient "github.com/stackitcloud/stackit-dns-api-client-go"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -135,53 +135,47 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 		return nil, "", err
 	}
 
-	authToken, err := s.getAuthToken(&cfg)
+	config, err := s.getRepositoryConfig(&cfg)
 	if err != nil {
 		return nil, "", err
 	}
 
-	config := s.getRepositoryConfig(cfg, authToken)
-
 	zoneDnsName, rrSetName := getZoneDnsNameAndRRSetName(ch)
-	zoneRepository := s.zoneRepositoryFactory.NewZoneRepository(config)
+	zoneRepository, err := s.zoneRepositoryFactory.NewZoneRepository(config)
+	if err != nil {
+		return nil, "", err
+	}
 	zone, err := zoneRepository.FetchZone(s.ctx, zoneDnsName)
 	if err != nil {
 		return nil, "", err
 	}
 
-	rrSetRepository := s.rrSetRepositoryFactory.NewRRSetRepository(config, zone.Id)
-
-	return rrSetRepository, rrSetName, nil
-}
-
-func (s *stackitDnsProviderResolver) getRepositoryConfig(
-	cfg StackitDnsProviderConfig,
-	authToken string,
-) repository.Config {
-	config := repository.Config{
-		ApiBasePath: cfg.ApiBasePath,
-		AuthToken:   authToken,
-		ProjectId:   cfg.ProjectId,
-		HttpClient:  s.httpClient,
+	rrSetRepository, err := s.rrSetRepositoryFactory.NewRRSetRepository(config, *zone.Id)
+	if err != nil {
+		return nil, "", err
 	}
 
-	return config
+	return rrSetRepository, rrSetName, nil
 }
 
 func (s *stackitDnsProviderResolver) createRRSet(
 	repo repository.RRSetRepository,
 	rrSetName, key string,
 ) error {
-	rrSet := stackitdnsclient.RrsetRrSetPost{
-		Comment: "This record set is managed by stackit-cert-manager-webhook",
-		Name:    rrSetName,
-		Records: []stackitdnsclient.RrsetRecordPost{
+	comment := "This record set is managed by stackit-cert-manager-webhook"
+	ttl := int64(60)
+	rrSetType := typeTxtRecord
+
+	rrSet := stackitdnsclient.RecordSet{
+		Comment: &comment,
+		Name:    &rrSetName,
+		Records: &[]stackitdnsclient.Record{
 			{
-				Content: key,
+				Content: &key,
 			},
 		},
-		Ttl:   60,
-		Type_: typeTxtRecord,
+		Ttl:  &ttl,
+		Type: &rrSetType,
 	}
 
 	return repo.CreateRRSet(s.ctx, rrSet)
@@ -203,6 +197,42 @@ func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig)
 	}
 
 	return token, nil
+}
+
+// geSaKeyPath gets the Service Account Key Path from the environment.
+func (s *stackitDnsProviderResolver) getSaKeyPath(cfg *StackitDnsProviderConfig) string {
+	if cfg.ServiceAccountKeyPath != "" {
+		return cfg.ServiceAccountKeyPath
+	}
+
+	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
+}
+
+func (s *stackitDnsProviderResolver) checkUseSaAuthentication(cfg *StackitDnsProviderConfig) bool {
+	return s.getSaKeyPath(cfg) != ""
+}
+
+func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProviderConfig) (repository.Config, error) {
+	config := repository.Config{
+		ApiBasePath: cfg.ApiBasePath,
+		ProjectId:   cfg.ProjectId,
+		HttpClient:  s.httpClient,
+		UseSaKey:    false,
+	}
+
+	switch {
+	case s.checkUseSaAuthentication(cfg):
+		config.SaKeyPath = s.getSaKeyPath(cfg)
+		config.UseSaKey = true
+	default:
+		authToken, err := s.getAuthToken(cfg)
+		if err != nil {
+			return repository.Config{}, err
+		}
+		config.AuthToken = authToken
+	}
+
+	return config, nil
 }
 
 func getZoneDnsNameAndRRSetName(ch *v1alpha1.ChallengeRequest) (string, string) {
@@ -250,18 +280,21 @@ func (s *stackitDnsProviderResolver) handleFetchRRSetError(err error, rrSetName 
 
 func (s *stackitDnsProviderResolver) deleteRRSet(
 	rrSetRepository repository.RRSetRepository,
-	rrSet *stackitdnsclient.DomainRrSet,
+	rrSet *stackitdnsclient.RecordSet,
 	rrSetName string,
 ) error {
-	err := rrSetRepository.DeleteRRSet(s.ctx, rrSet.Id)
+	if rrSet == nil {
+		return nil
+	}
+	err := rrSetRepository.DeleteRRSet(s.ctx, *rrSet.Id)
 	if err != nil {
-		return s.handleDeleteRRSetError(err, rrSetName, rrSet.Id)
+		return s.handleDeleteRRSetError(err, rrSetName, *rrSet.Id)
 	}
 
 	s.logger.Info(
 		"RRSet deleted",
 		zap.String("rrSetName", rrSetName),
-		zap.String("rrSetId", rrSet.Id),
+		zap.String("rrSetId", *rrSet.Id),
 	)
 
 	return nil
@@ -314,7 +347,7 @@ func (s *stackitDnsProviderResolver) handleRRSetNotFound(
 
 func (s *stackitDnsProviderResolver) updateExistingRRSet(
 	rrSetRepository repository.RRSetRepository,
-	rrSet *stackitdnsclient.DomainRrSet,
+	rrSet *stackitdnsclient.RecordSet,
 	rrSetName string,
 ) error {
 	s.logger.Info("RRSet found, updating RRSet", zap.String("rrSetName", rrSetName))

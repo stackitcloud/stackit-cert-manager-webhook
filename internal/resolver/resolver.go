@@ -224,12 +224,14 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProvider
 	case s.checkUseSaAuthentication(cfg):
 		config.SaKeyPath = s.getSaKeyPath(cfg)
 		config.UseSaKey = true
+		s.logger.Info("Using service account key for authentication", zap.String("saKeyPath", config.SaKeyPath))
 	default:
 		authToken, err := s.getAuthToken(cfg)
 		if err != nil {
 			return repository.Config{}, err
 		}
 		config.AuthToken = authToken
+		s.logger.Info("Using auth token for authentication")
 	}
 
 	return config, nil

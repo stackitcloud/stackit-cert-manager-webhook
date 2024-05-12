@@ -137,7 +137,6 @@ func TestDefaultConfigProvider_LoadConfigNamespaceFile(t *testing.T) {
 	})
 }
 
-//nolint:paralleltest // changing env may lead to data races in parallel testing
 func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
 	saKeyPath := "/path/to/sa/key"
 
@@ -161,8 +160,6 @@ func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
 	require.Equal(t, saKeyPath, config.SaKeyPath)
 	require.True(t, config.UseSaKey)
 }
-
-//nolint:paralleltest // changing env may lead to data races in parallel testing
 func TestGetRepositoryConfig_NoEnvSet(t *testing.T) {
 	oldAuthToken := stackitAuthToken
 	stackitAuthToken = "token" // global variable from resolver.go

@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 	"os"
 	"testing"
@@ -9,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
@@ -162,6 +162,7 @@ func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
 	require.Equal(t, saKeyPath, config.SaKeyPath)
 	require.True(t, config.UseSaKey)
 }
+
 func TestGetRepositoryConfig_NoEnvSet(t *testing.T) {
 	oldAuthToken := stackitAuthToken
 	stackitAuthToken = "token" // global variable from resolver.go

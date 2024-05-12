@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"go.uber.org/zap"
 	"net/http"
 	"os"
 	"testing"
@@ -147,6 +148,7 @@ func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
 
 	r := &stackitDnsProviderResolver{
 		httpClient: &http.Client{},
+		logger:     zap.NewNop(),
 	}
 
 	cfg := &StackitDnsProviderConfig{
@@ -173,6 +175,7 @@ func TestGetRepositoryConfig_NoEnvSet(t *testing.T) {
 	r := &stackitDnsProviderResolver{
 		httpClient:    &http.Client{},
 		secretFetcher: s,
+		logger:        zap.NewNop(),
 	}
 
 	cfg := &StackitDnsProviderConfig{

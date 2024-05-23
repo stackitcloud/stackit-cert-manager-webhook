@@ -22,6 +22,5 @@ go.work
 .idea
 out/
 bin/
-stackit-cert-manager-webhook-0.1.0.tgz
-stackit-cert-manager-webhook-0.1.*
+stackit-cert-manager-webhook-*
 index.yaml

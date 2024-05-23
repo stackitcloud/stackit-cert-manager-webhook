@@ -25,6 +25,7 @@ type StackitDnsProviderConfig struct {
 	AuthTokenSecretKey       string `json:"authTokenSecretKey"`
 	AuthTokenSecretNamespace string `json:"authTokenSecretNamespace"`
 	ServiceAccountKeyPath    string `json:"serviceAccountKeyPath"`
+	AcmeTxtRecordTTL         int64  `json:"acmeTxtRecordTTL"`
 }
 
 func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProviderConfig, error) {
@@ -78,6 +79,9 @@ func setDefaultValues(cfg *StackitDnsProviderConfig) {
 	}
 	if cfg.AuthTokenSecretKey == "" {
 		cfg.AuthTokenSecretKey = "auth-token"
+	}
+	if cfg.AcmeTxtRecordTTL == 0 {
+		cfg.AcmeTxtRecordTTL = 600
 	}
 }
 

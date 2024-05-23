@@ -185,6 +185,7 @@ spec:
             authTokenSecretKey: string
             authTokenSecretNamespace: string
             serviceAccountKeyPath: string
+            acmeTxtRecordTTL: int64
 ```
 
 - projectId: The unique identifier for the STACKIT project.
@@ -194,6 +195,7 @@ spec:
 - authTokenSecretKey: The key within the secret containing the STACKIT authentication token. (Default: auth-token)
 - authTokenSecretNamespace: The namespace of the secret containing the STACKIT authentication token. (Default: cert-manager)
 - serviceAccountKeyPath: The path to the service account key file. The file must be mounted into the container.
+- acmeTxtRecordTTL: The TTL for the ACME TXT record. (Default: 600)
 
 ## Test Procedures
 

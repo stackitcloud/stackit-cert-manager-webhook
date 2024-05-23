@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -65,19 +66,23 @@ func (s *stackitDnsProviderResolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (s *stackitDnsProviderResolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	rrSetRepository, rrSetName, err := s.initializeResolverContext(ch)
+	initResolverRes, err := s.initializeResolverContext(ch)
 	if err != nil {
 		return err
 	}
 
-	rrSet, err := rrSetRepository.FetchRRSetForZone(s.ctx, rrSetName, typeTxtRecord)
+	rrSet, err := initResolverRes.rrSetRepository.FetchRRSetForZone(
+		s.ctx,
+		initResolverRes.rrSetName,
+		typeTxtRecord,
+	)
 	if errors.Is(err, repository.ErrRRSetNotFound) {
-		return s.handleRRSetNotFound(rrSetRepository, rrSetName, ch.Key)
+		return s.handleRRSetNotFound(initResolverRes, ch.Key)
 	} else if err != nil {
 		return err
 	}
 
-	return s.updateExistingRRSet(rrSetRepository, rrSet, rrSetName)
+	return s.updateExistingRRSet(initResolverRes, rrSet)
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -87,12 +92,12 @@ func (s *stackitDnsProviderResolver) Present(ch *v1alpha1.ChallengeRequest) erro
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (s *stackitDnsProviderResolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	rrSetRepository, rrSetName, err := s.initializeResolverContext(ch)
+	initResolverRes, err := s.initializeResolverContext(ch)
 	if err != nil {
 		return s.handleErrorDuringInitialization(err)
 	}
 
-	return s.handleRRSetCleanup(rrSetRepository, rrSetName)
+	return s.handleRRSetCleanup(initResolverRes)
 }
 
 // Initialize will be called when the webhook first starts.
@@ -129,56 +134,75 @@ func (s *stackitDnsProviderResolver) Initialize(
 
 func (s *stackitDnsProviderResolver) initializeResolverContext(
 	ch *v1alpha1.ChallengeRequest,
-) (repository.RRSetRepository, string, error) {
+) (*initResolverContextResult, error) {
 	cfg, err := s.configProvider.LoadConfig(ch.Config)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	config, err := s.getRepositoryConfig(&cfg)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	zoneDnsName, rrSetName := getZoneDnsNameAndRRSetName(ch)
 	zoneRepository, err := s.zoneRepositoryFactory.NewZoneRepository(config)
 	if err != nil {
-		return nil, "", err
+		s.logger.Error("Error creating zone repository", zap.Error(err))
+
+		return nil, err
 	}
+
+	s.logger.Info("Fetching zone", zap.String("zoneDnsName", zoneDnsName))
+
 	zone, err := zoneRepository.FetchZone(s.ctx, zoneDnsName)
 	if err != nil {
-		return nil, "", err
+		s.logger.Error(
+			"Error fetching zone",
+			zap.Error(err),
+			zap.String("zoneDnsName", zoneDnsName),
+		)
+
+		return nil, err
 	}
+
+	s.logger.Info("Zone fetched", zap.String("zoneDnsName", zoneDnsName))
 
 	rrSetRepository, err := s.rrSetRepositoryFactory.NewRRSetRepository(config, *zone.Id)
 	if err != nil {
-		return nil, "", err
+		s.logger.Error("Error creating RRSet repository", zap.Error(err))
+
+		return nil, err
 	}
 
-	return rrSetRepository, rrSetName, nil
+	return &initResolverContextResult{
+		rrSetRepository:   rrSetRepository,
+		rrSetName:         rrSetName,
+		acmeTxtDefaultTTL: cfg.AcmeTxtRecordTTL,
+	}, nil
 }
 
 func (s *stackitDnsProviderResolver) createRRSet(
-	repo repository.RRSetRepository,
-	rrSetName, key string,
+	initResolverRes *initResolverContextResult, key string,
 ) error {
 	comment := "This record set is managed by stackit-cert-manager-webhook"
-	ttl := int64(60)
 	rrSetType := typeTxtRecord
 
 	rrSet := stackitdnsclient.RecordSet{
 		Comment: &comment,
-		Name:    &rrSetName,
+		Name:    &initResolverRes.rrSetName,
 		Records: &[]stackitdnsclient.Record{
 			{
 				Content: &key,
 			},
 		},
-		Ttl:  &ttl,
+		Ttl:  &initResolverRes.acmeTxtDefaultTTL,
 		Type: &rrSetType,
 	}
 
-	return repo.CreateRRSet(s.ctx, rrSet)
+	s.logger.Info("Creating RRSet", zap.String("rrSet", fmt.Sprintf("%+v", rrSet)))
+
+	return initResolverRes.rrSetRepository.CreateRRSet(s.ctx, rrSet)
 }
 
 // getAuthToken from Kubernetes secretFetcher.
@@ -212,7 +236,9 @@ func (s *stackitDnsProviderResolver) checkUseSaAuthentication(cfg *StackitDnsPro
 	return s.getSaKeyPath(cfg) != ""
 }
 
-func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProviderConfig) (repository.Config, error) {
+func (s *stackitDnsProviderResolver) getRepositoryConfig(
+	cfg *StackitDnsProviderConfig,
+) (repository.Config, error) {
 	config := repository.Config{
 		ApiBasePath: cfg.ApiBasePath,
 		ProjectId:   cfg.ProjectId,
@@ -224,7 +250,10 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(cfg *StackitDnsProvider
 	case s.checkUseSaAuthentication(cfg):
 		config.SaKeyPath = s.getSaKeyPath(cfg)
 		config.UseSaKey = true
-		s.logger.Info("Using service account key for authentication", zap.String("saKeyPath", config.SaKeyPath))
+		s.logger.Info(
+			"Using service account key for authentication",
+			zap.String("saKeyPath", config.SaKeyPath),
+		)
 	default:
 		authToken, err := s.getAuthToken(cfg)
 		if err != nil {
@@ -255,17 +284,20 @@ func (s *stackitDnsProviderResolver) handleErrorDuringInitialization(
 }
 
 func (s *stackitDnsProviderResolver) handleRRSetCleanup(
-	rrSetRepository repository.RRSetRepository,
-	rrSetName string,
+	initResolverRes *initResolverContextResult,
 ) error {
-	s.logger.Info("Cleaning up RRSet", zap.String("rrSetName", rrSetName))
+	s.logger.Info("Cleaning up RRSet", zap.String("rrSetName", initResolverRes.rrSetName))
 
-	rrSet, err := rrSetRepository.FetchRRSetForZone(s.ctx, rrSetName, typeTxtRecord)
+	rrSet, err := initResolverRes.rrSetRepository.FetchRRSetForZone(
+		s.ctx,
+		initResolverRes.rrSetName,
+		typeTxtRecord,
+	)
 	if err != nil {
-		return s.handleFetchRRSetError(err, rrSetName)
+		return s.handleFetchRRSetError(err, initResolverRes.rrSetName)
 	}
 
-	return s.deleteRRSet(rrSetRepository, rrSet, rrSetName)
+	return s.deleteRRSet(initResolverRes.rrSetRepository, rrSet, initResolverRes.rrSetName)
 }
 
 func (s *stackitDnsProviderResolver) handleFetchRRSetError(err error, rrSetName string) error {
@@ -315,6 +347,7 @@ func (s *stackitDnsProviderResolver) handleDeleteRRSetError(
 
 		return nil
 	}
+
 	s.logger.Error(
 		"Error deleting RRSet",
 		zap.Error(err),
@@ -326,41 +359,54 @@ func (s *stackitDnsProviderResolver) handleDeleteRRSetError(
 }
 
 func (s *stackitDnsProviderResolver) handleRRSetNotFound(
-	rrSetRepository repository.RRSetRepository,
-	rrSetName string,
+	initResolverRes *initResolverContextResult,
 	challengeKey string,
 ) error {
-	s.logger.Info("RRSet not found, creating new RRSet", zap.String("rrSetName", rrSetName))
+	s.logger.Info(
+		"RRSet not found, creating new RRSet",
+		zap.String("rrSetName", initResolverRes.rrSetName),
+	)
 
-	if err := s.createRRSet(rrSetRepository, rrSetName, challengeKey); err != nil {
+	if err := s.createRRSet(initResolverRes, challengeKey); err != nil {
 		s.logger.Error(
 			"Error creating RRSet",
 			zap.Error(err),
-			zap.String("rrSetName", rrSetName),
+			zap.String("rrSetName", initResolverRes.rrSetName),
 		)
 
 		return err
 	}
 
-	s.logger.Info("RRSet created", zap.String("rrSetName", rrSetName))
+	s.logger.Info("RRSet created", zap.String("rrSetName", initResolverRes.rrSetName))
 
 	return nil
 }
 
 func (s *stackitDnsProviderResolver) updateExistingRRSet(
-	rrSetRepository repository.RRSetRepository,
+	initResolverRes *initResolverContextResult,
 	rrSet *stackitdnsclient.RecordSet,
-	rrSetName string,
 ) error {
-	s.logger.Info("RRSet found, updating RRSet", zap.String("rrSetName", rrSetName))
+	s.logger.Info("RRSet found, updating RRSet", zap.String("rrSetName", initResolverRes.rrSetName))
 
-	if err := rrSetRepository.UpdateRRSet(s.ctx, *rrSet); err != nil {
-		s.logger.Error("Error updating RRSet", zap.Error(err), zap.String("rrSetName", rrSetName))
+	rrSet.Ttl = &initResolverRes.acmeTxtDefaultTTL
+
+	if err := initResolverRes.rrSetRepository.UpdateRRSet(s.ctx, *rrSet); err != nil {
+		s.logger.Error(
+			"Error updating RRSet",
+			zap.Error(err),
+			zap.String("rrSetName", initResolverRes.rrSetName),
+		)
 
 		return err
 	}
 
-	s.logger.Info("RRSet updated", zap.String("rrSetName", rrSetName))
+	s.logger.Info("RRSet updated", zap.String("rrSetName", initResolverRes.rrSetName))
 
 	return nil
+}
+
+type initResolverContextResult struct {
+	rrSetRepository   repository.RRSetRepository
+	rrSetName         string
+	acmeTxtDefaultTTL int64
 }

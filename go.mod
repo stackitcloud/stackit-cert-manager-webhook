@@ -3,17 +3,17 @@ module github.com/stackitcloud/stackit-cert-manager-webhook
 go 1.21
 
 require (
-	github.com/cert-manager/cert-manager v1.11.0
+	github.com/cert-manager/cert-manager v1.14.5
 	github.com/stackitcloud/stackit-dns-api-client-go v0.0.0-20240207124424-bdfd0c2f7009
-	github.com/stackitcloud/stackit-sdk-go/core v0.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.8.4
+	github.com/stackitcloud/stackit-sdk-go/core v0.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.10.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/mock v0.4.0
 	go.uber.org/zap v1.27.0
-	k8s.io/api v0.26.0
-	k8s.io/apiextensions-apiserver v0.26.0
-	k8s.io/apimachinery v0.26.0
-	k8s.io/client-go v0.26.0
+	k8s.io/api v0.30.1
+	k8s.io/apiextensions-apiserver v0.30.1
+	k8s.io/apimachinery v0.30.1
+	k8s.io/client-go v0.30.1
 )
 
 require (

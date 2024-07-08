@@ -16,9 +16,8 @@ ACME Issuer with [cert-manager](https://cert-manager.io/docs/).
 ## Installation
 
 ```bash
-helm install stackit-cert-manager-webhook \
-  --namespace cert-manager \
-  https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.2.0/stackit-cert-manager-webhook-0.2.0.tgz
+helm repo add stackit-cert-manager-webhook https://stackitcloud.github.io/stackit-cert-manager-webhook
+helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-manager-webhook/stackit-cert-manager-webhook
 ```
 
 ## Usage
@@ -54,7 +53,7 @@ helm install stackit-cert-manager-webhook \
     ```bash
     helm upgrade stackit-cert-manager-webhook \
       --namespace cert-manager \
-      https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.1.2/stackit-cert-manager-webhook-v0.1.2.tgz \
+      stackit-cert-manager-webhook/stackit-cert-manager-webhook \
      --set stackitSaAuthentication.enabled=true
     ```
 

@@ -23,4 +23,3 @@ go.work
 out/
 bin/
 stackit-cert-manager-webhook-*
-index.yaml

@@ -8,6 +8,6 @@ entries:
       digest: 1a1fc7b14a858508e811ba80df5754f07ef89618bff3a7ab4283e8d233aa2476
       name: stackit-cert-manager-webhook
       urls:
-        - https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/stackit-cert-manager-webhook-0.2.0/stackit-cert-manager-webhook-0.2.0.tgz
+        - https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.2.0/stackit-cert-manager-webhook-0.2.0.tgz
       version: 0.2.0
 generated: "2024-07-08T08:14:01.240429047Z"

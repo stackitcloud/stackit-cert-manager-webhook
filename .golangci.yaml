@@ -697,6 +697,10 @@ issues:
         - gosec
         - typecheck
 
+    - path: go.mod
+      linters:
+        - gomoddirectives
+
     - path: go/pkg/mod/
       linters:
         - typecheck

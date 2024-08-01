@@ -2,13 +2,13 @@ package repository_test
 
 import (
 	"encoding/json"
-	"k8s.io/utils/ptr"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/ptr"
 )
 
 func getTestServer(t *testing.T) *httptest.Server { //nolint:funlen // This is a test helper

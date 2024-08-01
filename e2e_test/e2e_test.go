@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/cert-manager/cert-manager/test/acme/dns"
+	"github.com/cert-manager/cert-manager/test/acme"
 )
 
 var (

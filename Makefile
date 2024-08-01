@@ -1,4 +1,4 @@
-GOLANGCI_VERSION = 1.58.1
+GOLANGCI_VERSION = 1.59.1
 LICENCES_IGNORE_LIST = $(shell cat licenses/licenses-ignore-list.txt)
 
 VERSION ?= 0.0.1
@@ -17,7 +17,7 @@ download:
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build -ldflags "-s -w" -o ./bin/stackit-cert-manager-webhook -v cmd/main.go
+	CGO_ENABLED=0 go build -ldflags "-s -w" -o ./bin/stackit-cert-manager-webhook -v cmd/webhook/main.go
 
 .PHONY: docker-build
 docker-build:

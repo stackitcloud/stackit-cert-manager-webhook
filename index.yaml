@@ -3,6 +3,15 @@ entries:
   stackit-cert-manager-webhook:
   - apiVersion: v1
     appVersion: "1.0"
+    created: "2024-08-02T06:39:52.662748928Z"
+    description: A Helm chart for Kubernetes
+    digest: e49f4d7495f5ebc37a233b7ec5db00f01d03f031ed44e63601c80b63ecdc9ccb
+    name: stackit-cert-manager-webhook
+    urls:
+    - https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/stackit-cert-manager-webhook-0.3.0-alpha1/stackit-cert-manager-webhook-0.3.0-alpha1.tgz
+    version: 0.3.0-alpha1
+  - apiVersion: v1
+    appVersion: "1.0"
     created: "2024-07-15T07:58:11.902321258Z"
     description: A Helm chart for Kubernetes
     digest: 4e7d7322c46fe496f98a524cbcfc22d837bf2f7a69de589cd81a7c529ab5a7ce
@@ -28,4 +37,4 @@ entries:
     urls:
     - https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.2.0/stackit-cert-manager-webhook-0.2.0.tgz
     version: 0.2.0
-generated: "2024-07-15T07:58:11.902337839Z"
+generated: "2024-08-02T06:39:52.662771861Z"

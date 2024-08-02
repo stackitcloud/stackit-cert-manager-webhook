@@ -1,4 +1,5 @@
 GOLANGCI_VERSION = 1.59.1
+HELM_DOCS_VERSION = 1.14.2
 LICENCES_IGNORE_LIST = $(shell cat licenses/licenses-ignore-list.txt)
 
 VERSION ?= 0.0.1
@@ -36,6 +37,13 @@ $(GOLANGCI_LINT):
 
 lint: $(GOLANGCI_LINT) download
 	$(GOLANGCI_LINT) run -v
+
+HELM_DOCS = bin/helm-docs
+$(HELM_DOCS):
+	GOBIN=$(PWD)/bin go install github.com/norwoodj/helm-docs/cmd/helm-docs@v$(HELM_DOCS_VERSION)
+
+helm-docs: $(HELM_DOCS)
+	$(HELM_DOCS)
 
 out:
 	@mkdir -pv "$(@)"

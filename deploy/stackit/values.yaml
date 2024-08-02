@@ -6,33 +6,53 @@
 # solve the DNS01 challenge.
 # This group name should be **unique**, hence using your own company's domain
 # here is recommended.
+# -- The GroupName here is used to identify your company or business unit that created this webhook. Therefore, it should be acme.stackit.de.
 groupName: acme.stackit.de
 
+# -- Replicas for the webhook. Since it is a stateless application server that sends requests you can increase the number as you want. Most of the time however, 1 replica is enough.
 replicaCount: 1
 
+# -- Meta information of the cert-manager itself.
 certManager:
+  # -- namespace where the webhook should be installed. Cert-Manager and the webhook should be in the same namespace.
   namespace: cert-manager
+  # -- service account name for the cert-manager.
   serviceAccountName: cert-manager
 
+# -- Image information for the webhook.
 image:
+  # -- repository of the image.
   repository: ghcr.io/stackitcloud/stackit-cert-manager-webhook
+  # -- tag of the image.
   tag: latest
+  # -- pull policy of the image.
   pullPolicy: IfNotPresent
 
+# -- Webhook configuration.
 nameOverride: ""
+# -- Fullname override of the webhook.
 fullnameOverride: ""
 
+# -- Configuration for the stackit service account keys.
 stackitSaAuthentication:
+  # -- enabled flag for the stackit service account keys.
   enabled: false
+  # -- secret where the service account key is stored. Should be in the same namespace as the webhook since it will be mounted into the pod.
   secretName: stackit-sa-authentication
+  # -- key of the service account key in the secret. Which will be later be used to load in keys in the pod as well.
   fileName: sa.json
+  # -- Path where the secret will be mounted in the pod.
   mountPath: /var/run/secrets/stackit
 
+# -- Configuration for the webhook service.
 service:
+  # -- type of the service.
   type: ClusterIP
+  # -- port of the service.
   port: 443
 
-resources: {}
+# -- Kubernetes resources for the webhook. Usually limits.cpu=100m, limits.memory=128Mi, requests.cpu=100m, requests.memory=128Mi is enough for the webhook.
+resources: { }
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -41,19 +61,21 @@ resources: {}
   #  cpu: 100m
   #  memory: 128Mi
   # requests:
-  #  cpu: 100m
+#  cpu: 100m
 #  memory: 128Mi
 
-nodeSelector: {}
+# -- Node selector for the webhook.
+nodeSelector: { }
 
-tolerations: []
+# -- Tolerations for the webhook.
+tolerations: [ ]
 
-affinity: {}
+affinity: { }
 
 securityContext:
   allowPrivilegeEscalation: false
   capabilities:
-    drop: ["ALL"]
+    drop: [ "ALL" ]
 
 podSecurityContext:
   runAsGroup: 1000

@@ -1,10 +1,10 @@
 # STACKIT Webhook Integration for Cert Manager
 
 [![GoTemplate](https://img.shields.io/badge/go/template-black?logo=go)](https://github.com/golang-standards/project-layout)
-[![Go](https://img.shields.io/badge/go-1.21.0-blue?logo=go)](https://golang.org/)
+[![Go](https://img.shields.io/badge/go-1.22.0-blue?logo=go)](https://golang.org/)
 [![Helm](https://img.shields.io/badge/helm-3.12.3-blue?logo=helm)](https://helm.sh/)
-[![Kubernetes](https://img.shields.io/badge/kubernetes-1.26.0-blue?logo=kubernetes)](https://kubernetes.io/)
-[![Cert Manager](https://img.shields.io/badge/cert--manager-1.11.0-blue?logo=cert-manager)](https://cert-manager.io/)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-1.30.2-blue?logo=kubernetes)](https://kubernetes.io/)
+[![Cert Manager](https://img.shields.io/badge/cert--manager-1.15.2-blue?logo=cert-manager)](https://cert-manager.io/)
 [![Releases](https://img.shields.io/github/v/release/stackitcloud/stackit-cert-manager-webhook?include_prereleases)](https://github.com/stackitcloud/stackit-cert-manager-webhook/releases)
 [![CI](https://github.com/stackitcloud/stackit-cert-manager-webhook/actions/workflows/main.yml/badge.svg)](https://github.com/stackitcloud/stackit-cert-manager-webhook/actions/workflows/main.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/stackitcloud/stackit-cert-manager-webhook)](https://goreportcard.com/report/github.com/stackitcloud/stackit-cert-manager-webhook)

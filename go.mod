@@ -2,7 +2,7 @@ module github.com/stackitcloud/stackit-cert-manager-webhook
 
 go 1.22.0
 
-toolchain go1.22.5
+toolchain go1.22.6
 
 // Do not remove this comment:
 // please place any replace statements here at the top for visibility and add a
@@ -13,13 +13,13 @@ toolchain go1.22.5
 // with the newer versions of "github.com/prometheus/common/expfmt" and "github.com/prometheus/client_golang"
 // fails. These replace statements can be removed once expfmt.FmtText is no longer used by any of the libraries
 // we depend on.
-replace github.com/prometheus/common => github.com/prometheus/common v0.46.0
+replace github.com/prometheus/common => github.com/prometheus/common v0.55.0
 
-replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
+replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.19.1
 
 // fixes k8s/apiserver: cannot use &itemsNode{…} (value of type *itemsNode) as checker.AstNode value in return
 // statement: *itemsNode does not implement checker.AstNode (wrong type for method Expr)
-replace github.com/google/cel-go => github.com/google/cel-go v0.17.8
+replace github.com/google/cel-go => github.com/google/cel-go v0.21.0
 
 require (
 	github.com/cert-manager/cert-manager v1.15.2
@@ -28,16 +28,16 @@ require (
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/mock v0.4.0
 	go.uber.org/zap v1.27.0
-	k8s.io/api v0.30.2
-	k8s.io/apiextensions-apiserver v0.30.2
-	k8s.io/apimachinery v0.30.2
-	k8s.io/client-go v0.30.2
+	k8s.io/api v0.30.3
+	k8s.io/apiextensions-apiserver v0.30.3
+	k8s.io/apimachinery v0.30.3
+	k8s.io/client-go v0.30.3
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 )
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -120,8 +120,8 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.30.2 // indirect
-	k8s.io/component-base v0.30.2 // indirect
+	k8s.io/apiserver v0.30.3 // indirect
+	k8s.io/component-base v0.30.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kms v0.31.0-rc.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20240730131305-7a9a4e85957e // indirect

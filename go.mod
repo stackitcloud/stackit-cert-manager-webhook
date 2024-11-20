@@ -9,7 +9,7 @@ go 1.23.0
 replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.4.3
 
 require (
-	github.com/cert-manager/cert-manager v1.16.1
+	github.com/cert-manager/cert-manager v1.16.2
 	github.com/stackitcloud/stackit-sdk-go/core v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.11.0
 	github.com/stretchr/testify v1.9.0

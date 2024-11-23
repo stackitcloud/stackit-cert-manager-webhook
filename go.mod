@@ -12,7 +12,7 @@ require (
 	github.com/cert-manager/cert-manager v1.16.2
 	github.com/stackitcloud/stackit-sdk-go/core v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.5.0
 	go.uber.org/zap v1.27.0
 	k8s.io/api v0.31.3

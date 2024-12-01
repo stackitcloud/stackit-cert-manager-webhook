@@ -63,6 +63,9 @@ spec:
               mountPath: {{ .Values.stackitSaAuthentication.mountPath }}
               readOnly: true
           {{- end }}
+          {{- if .Values.additionalVolumeMounts }}
+          {{ toYaml .Values.additionalVolumeMounts | indent 10 }}
+          {{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:
@@ -73,6 +76,9 @@ spec:
         - name: stackit-sa-authentication
           secret:
             secretName: {{ .Values.stackitSaAuthentication.secretName }}
+      {{- end }}
+      {{- if .Values.additionalVolumes }}
+      {{ toYaml .Values.additionalVolumes | indent 8 }}
       {{- end }}
     {{- with .Values.podSecurityContext }}
       securityContext:

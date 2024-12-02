@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
 )
 
@@ -31,13 +30,7 @@ type zoneRepositoryFactory struct{}
 func (z zoneRepositoryFactory) NewZoneRepository(
 	config Config,
 ) (ZoneRepository, error) {
-	httpClient := *config.HttpClient
-
-	apiClient, err := newStackitDnsClient(
-		stackitconfig.WithToken(config.AuthToken),
-		stackitconfig.WithHTTPClient(&httpClient),
-		stackitconfig.WithEndpoint(config.ApiBasePath),
-	)
+	apiClient, err := chooseNewStackitDnsClient(config)
 	if err != nil {
 		return nil, err
 	}

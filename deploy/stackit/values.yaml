@@ -52,7 +52,8 @@ service:
   port: 443
 
 # -- Kubernetes resources for the webhook. Usually limits.cpu=100m, limits.memory=128Mi, requests.cpu=100m, requests.memory=128Mi is enough for the webhook.
-resources: { }
+resources:
+  {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -65,19 +66,29 @@ resources: { }
 #  memory: 128Mi
 
 # -- Node selector for the webhook.
-nodeSelector: { }
+nodeSelector: {}
 
 # -- Tolerations for the webhook.
-tolerations: [ ]
+tolerations: []
 
-affinity: { }
+affinity: {}
 
 securityContext:
   allowPrivilegeEscalation: false
   capabilities:
-    drop: [ "ALL" ]
+    drop: ["ALL"]
 
 podSecurityContext:
   runAsGroup: 1000
   runAsUser: 1000
   runAsNonRoot: true
+
+additionalVolumes: []
+#   - name: extra-config
+#     configMap:
+#       name: extra-config-map
+
+additionalVolumeMounts: []
+#   - name: extra-config
+#     mountPath: /etc/extra-config
+#     readOnly: true

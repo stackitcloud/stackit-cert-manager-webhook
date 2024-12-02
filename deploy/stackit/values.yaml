@@ -24,7 +24,7 @@ image:
   # -- repository of the image.
   repository: ghcr.io/stackitcloud/stackit-cert-manager-webhook
   # -- tag of the image.
-  tag: latest
+  tag: v0.3.1
   # -- pull policy of the image.
   pullPolicy: IfNotPresent
 

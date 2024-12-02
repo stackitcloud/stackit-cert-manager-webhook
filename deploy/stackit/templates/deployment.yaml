@@ -32,10 +32,10 @@ spec:
           env:
             - name: GROUP_NAME
               value: {{ .Values.groupName | quote }}
-          {{- if .Values.stackitSaAuthentication.enabled }}
+            {{- if .Values.stackitSaAuthentication.enabled }}
             - name: STACKIT_SERVICE_ACCOUNT_KEY_PATH
               value: "{{ .Values.stackitSaAuthentication.mountPath}}/{{ .Values.stackitSaAuthentication.fileName}}"
-          {{- end }}
+            {{- end }}
           ports:
             - name: https
               containerPort: 8443
@@ -50,49 +50,49 @@ spec:
               scheme: HTTPS
               path: /healthz
               port: https
-        {{- with .Values.securityContext }}
+          {{- with .Values.securityContext }}
           securityContext:
 {{ toYaml . | indent 12 }}
-        {{- end }}
+          {{- end }}
           volumeMounts:
             - name: certs
               mountPath: /tls
               readOnly: true
-          {{- if .Values.stackitSaAuthentication.enabled }}
+            {{- if .Values.stackitSaAuthentication.enabled }}
             - name: stackit-sa-authentication
               mountPath: {{ .Values.stackitSaAuthentication.mountPath }}
               readOnly: true
-          {{- end }}
-          {{- if .Values.additionalVolumeMounts }}
-          {{ toYaml .Values.additionalVolumeMounts | indent 10 }}
-          {{- end }}
+            {{- end }}
+            {{- if .Values.additionalVolumeMounts }}
+{{ toYaml .Values.additionalVolumeMounts | indent 12 }}
+            {{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:
         - name: certs
           secret:
             secretName: {{ include "stackit-cert-manager-webhook.servingCertificate" . }}
-      {{- if .Values.stackitSaAuthentication.enabled }}
+        {{- if .Values.stackitSaAuthentication.enabled }}
         - name: stackit-sa-authentication
           secret:
             secretName: {{ .Values.stackitSaAuthentication.secretName }}
-      {{- end }}
-      {{- if .Values.additionalVolumes }}
-      {{ toYaml .Values.additionalVolumes | indent 8 }}
-      {{- end }}
-    {{- with .Values.podSecurityContext }}
+        {{- end }}
+        {{- if .Values.additionalVolumes }}
+{{ toYaml .Values.additionalVolumes | indent 8 }}
+        {{- end }}
+      {{- with .Values.podSecurityContext }}
       securityContext:
 {{ toYaml . | indent 8 }}
-    {{- end }}
-    {{- with .Values.nodeSelector }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}
-    {{- end }}
-    {{- with .Values.affinity }}
+      {{- end }}
+      {{- with .Values.affinity }}
       affinity:
 {{ toYaml . | indent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
+      {{- end }}
+      {{- with .Values.tolerations }}
       tolerations:
 {{ toYaml . | indent 8 }}
-    {{- end }}
+      {{- end }}

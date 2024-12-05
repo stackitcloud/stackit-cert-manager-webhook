@@ -234,5 +234,5 @@ For those interested in the Helm chart creation mechanics, the process was facil
 helm package deploy/stackit
 ```
 
-To release a new version of the Helm chart, one must meticulously update the version delineation in the
+To release a new version of the Helm chart, one must meticulously update the appVersion and (chart)version delineation in the
 [Chart.yaml](./deploy/stackit/Chart.yaml). Post this modification, initiate a new release to encompass these changes.

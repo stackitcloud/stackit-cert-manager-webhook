@@ -6,19 +6,19 @@ go 1.23.0
 // please place any replace statements here at the top for visibility and add a
 // comment to it as to when it can be removed
 
-replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.4.3
+replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.5.0
 
 require (
 	github.com/cert-manager/cert-manager v1.16.2
 	github.com/stackitcloud/stackit-sdk-go/core v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.12.1
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.5.0
 	go.uber.org/zap v1.27.0
-	k8s.io/api v0.31.4
-	k8s.io/apiextensions-apiserver v0.31.4
-	k8s.io/apimachinery v0.31.4
-	k8s.io/client-go v0.31.4
+	k8s.io/api v0.32.0
+	k8s.io/apiextensions-apiserver v0.32.0
+	k8s.io/apimachinery v0.32.0
+	k8s.io/client-go v0.32.0
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 )
 

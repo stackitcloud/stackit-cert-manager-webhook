@@ -2,4 +2,4 @@ apiVersion: v1
 appVersion: "v0.3.4"
 description: A Helm chart for stackitcloud/stackit-cert-manager-webhook
 name: stackit-cert-manager-webhook
-version: 0.3.4
+version: 0.3.5

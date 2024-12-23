@@ -1,5 +1,9 @@
 apiVersion: v1
 kind: ServiceAccount
+{{- with .Values.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
 metadata:
   name: {{ include "stackit-cert-manager-webhook.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}

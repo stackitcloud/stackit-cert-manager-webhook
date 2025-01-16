@@ -24,13 +24,14 @@ helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-
 
 1. ***Initiation of STACKIT Authentication Token Secret:***
     ```bash
-    kubectl create secret generic stackit-cert-manager-webhook \
-      --namespace=cert-manager \
+    kubectl create secret generic stackit-sa-authentication \
+      -n cert-manager \
       --from-literal=auth-token=<STACKIT AUTH TOKEN>
     ```
    Or alternatively we can utilize the STACKIT service account path authentication:
       ```
-    kubectl create secret generic stackit-sa-authentication -n cert-manager \
+    kubectl create secret generic stackit-sa-authentication \
+        -n cert-manager \
         --from-literal=sa.json='{
       "id": "4e1fe486-b463-4bcd-9210-288854268e34",
       "publicKey": "-----BEGIN PUBLIC KEY-----\nPUBLIC_KEY\n-----END PUBLIC KEY-----",

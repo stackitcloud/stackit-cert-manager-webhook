@@ -10,7 +10,7 @@ replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-dif
 
 require (
 	github.com/cert-manager/cert-manager v1.17.1
-	github.com/stackitcloud/stackit-sdk-go/core v0.16.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.16.2
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.13.1
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.5.0
@@ -46,7 +46,7 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.22.1 // indirect

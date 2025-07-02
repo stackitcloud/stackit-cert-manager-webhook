@@ -197,7 +197,7 @@ func (s *stackitDnsProviderResolver) createRRSet(
 			},
 		},
 		Ttl:  &initResolverRes.acmeTxtDefaultTTL,
-		Type: &rrSetType,
+		Type: stackitdnsclient.RecordSetGetTypeAttributeType(&rrSetType),
 	}
 
 	s.logger.Info("Creating RRSet", zap.String("rrSet", fmt.Sprintf("%+v", rrSet)))

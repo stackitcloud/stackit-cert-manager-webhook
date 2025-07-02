@@ -95,7 +95,7 @@ func (r *rrSetRepository) CreateRRSet(
 		Comment: rrSet.Comment,
 		Name:    rrSet.Name,
 		Ttl:     rrSet.Ttl,
-		Type:    rrSet.Type,
+		Type:    stackitdnsclient.CreateRecordSetPayloadGetTypeAttributeType(rrSet.Type),
 		Records: &records,
 	}
 	_, err := r.apiClient.CreateRecordSet(ctx, r.projectId, r.zoneId).CreateRecordSetPayload(payload).Execute()

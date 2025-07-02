@@ -613,7 +613,6 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exportloopref
     - forcetypeassert
     - funlen
     - gci
@@ -647,7 +646,6 @@ linters:
     - predeclared
     - promlinter
     - staticcheck
-    - tenv
     - thelper
     - tparallel
     - unconvert

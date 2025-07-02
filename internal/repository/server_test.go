@@ -170,7 +170,7 @@ func getRRSetResponseSuccess(t *testing.T, w http.ResponseWriter) {
 		RrSets: ptr.To([]stackitdnsclient.RecordSet{
 			{
 				Name: ptr.To("test.com."),
-				Type: ptr.To("TXT"),
+				Type: stackitdnsclient.RecordSetGetTypeAttributeType(ptr.To("TXT")),
 				Ttl:  ptr.To(int64(300)),
 				Records: ptr.To([]stackitdnsclient.Record{
 					{Content: ptr.To("_acme-challenge.test.com")},

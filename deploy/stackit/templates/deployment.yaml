@@ -36,6 +36,12 @@ spec:
             - name: STACKIT_SERVICE_ACCOUNT_KEY_PATH
               value: "{{ .Values.stackitSaAuthentication.mountPath}}/{{ .Values.stackitSaAuthentication.fileName}}"
             {{- end }}
+            {{- if .Values.extraEnv }}
+            {{- range .Values.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- end }}
           ports:
             - name: https
               containerPort: 8443

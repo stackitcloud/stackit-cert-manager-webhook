@@ -94,3 +94,12 @@ additionalVolumeMounts: []
 #   - name: extra-config
 #     mountPath: /etc/extra-config
 #     readOnly: true
+
+# -- Placeholder for additional env-variables. Apply via "--set"-command  or 
+# -- delete the next line and add your variables as in the commented example below.
+extraEnv: []
+# extraEnv:
+#   - name: HTTP_PROXY
+#     value: "127.0.0.1"
+#   - name: ANOTHER_VAR
+#     value: "some-value"

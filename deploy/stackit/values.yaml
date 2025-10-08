@@ -79,11 +79,15 @@ securityContext:
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault
 
 podSecurityContext:
   runAsGroup: 1000
   runAsUser: 1000
   runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
 
 additionalVolumes: []
 #   - name: extra-config

@@ -1,4 +1,4 @@
-GOLANGCI_VERSION = 1.64.8
+GOLANGCI_VERSION = 2.6.1
 HELM_DOCS_VERSION = 1.14.2
 LICENCES_IGNORE_LIST = $(shell cat licenses/licenses-ignore-list.txt)
 

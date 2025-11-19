@@ -12,8 +12,8 @@ replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-dif
 
 require (
 	github.com/cert-manager/cert-manager v1.19.1
-	github.com/stackitcloud/stackit-sdk-go/core v0.19.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.20.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.27.0

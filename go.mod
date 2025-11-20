@@ -16,7 +16,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	k8s.io/api v0.34.2
 	k8s.io/apiextensions-apiserver v0.34.2
 	k8s.io/apimachinery v0.34.2

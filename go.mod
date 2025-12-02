@@ -2,7 +2,7 @@ module github.com/stackitcloud/stackit-cert-manager-webhook
 
 go 1.25.0
 
-toolchain go1.25.4
+toolchain go1.25.5
 
 // Do not remove this comment:
 // please place any replace statements here at the top for visibility and add a

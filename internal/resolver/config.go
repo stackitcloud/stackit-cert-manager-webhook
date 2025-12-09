@@ -21,11 +21,11 @@ type defaultConfigProvider struct {
 type StackitDnsProviderConfig struct {
 	ProjectId                string `json:"projectId"`
 	ApiBasePath              string `json:"apiBasePath"`
-	ServiceAccountBaseUrl    string `json:"serviceAccountBaseUrl"`
 	AuthTokenSecretRef       string `json:"authTokenSecretRef"`
 	AuthTokenSecretKey       string `json:"authTokenSecretKey"`
 	AuthTokenSecretNamespace string `json:"authTokenSecretNamespace"`
 	ServiceAccountKeyPath    string `json:"serviceAccountKeyPath"`
+	ServiceAccountBaseUrl    string `json:"serviceAccountBaseUrl"`
 	AcmeTxtRecordTTL         int64  `json:"acmeTxtRecordTTL"`
 }
 

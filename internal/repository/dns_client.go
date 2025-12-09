@@ -28,6 +28,7 @@ func newStackitDnsClientKeyPath(config Config) (*stackitdnsclient.APIClient, err
 		stackitconfig.WithServiceAccountKeyPath(config.SaKeyPath),
 		stackitconfig.WithHTTPClient(&httpClient),
 		stackitconfig.WithEndpoint(config.ApiBasePath),
+		stackitconfig.WithTokenEndpoint(config.ServiceAccountBaseUrl),
 	)
 }
 

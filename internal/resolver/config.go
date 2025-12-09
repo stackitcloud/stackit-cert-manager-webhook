@@ -25,6 +25,7 @@ type StackitDnsProviderConfig struct {
 	AuthTokenSecretKey       string `json:"authTokenSecretKey"`
 	AuthTokenSecretNamespace string `json:"authTokenSecretNamespace"`
 	ServiceAccountKeyPath    string `json:"serviceAccountKeyPath"`
+	ServiceAccountBaseUrl    string `json:"serviceAccountBaseUrl"`
 	AcmeTxtRecordTTL         int64  `json:"acmeTxtRecordTTL"`
 }
 

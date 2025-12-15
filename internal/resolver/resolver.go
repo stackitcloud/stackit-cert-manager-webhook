@@ -240,10 +240,11 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 	cfg *StackitDnsProviderConfig,
 ) (repository.Config, error) {
 	config := repository.Config{
-		ApiBasePath: cfg.ApiBasePath,
-		ProjectId:   cfg.ProjectId,
-		HttpClient:  s.httpClient,
-		UseSaKey:    false,
+		ApiBasePath:           cfg.ApiBasePath,
+		ProjectId:             cfg.ProjectId,
+		HttpClient:            s.httpClient,
+		UseSaKey:              false,
+		ServiceAccountBaseUrl: cfg.ServiceAccountBaseUrl,
 	}
 
 	switch {
@@ -253,6 +254,7 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 		s.logger.Info(
 			"Using service account key for authentication",
 			zap.String("saKeyPath", config.SaKeyPath),
+			zap.String("serviceAccountBaseUrl", config.ServiceAccountBaseUrl),
 		)
 	default:
 		authToken, err := s.getAuthToken(cfg)

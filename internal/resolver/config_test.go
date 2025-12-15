@@ -79,6 +79,16 @@ func TestLoadConfig(t *testing.T) {
 		require.Equal(t, "auth-token", cfg.AuthTokenSecretKey)
 		require.Equal(t, int64(600), cfg.AcmeTxtRecordTTL)
 	})
+
+	t.Run("custom service account base url", func(t *testing.T) {
+		t.Parallel()
+
+		rawCfg := &v1.JSON{Raw: []byte(`{"projectId":"test", "authTokenSecretNamespace": "test", "serviceAccountBaseUrl": "https://custom.stackit.cloud/dns"}`)}
+		cfg, err := d.LoadConfig(rawCfg)
+		require.NoError(t, err)
+		require.Equal(t, "test", cfg.ProjectId)
+		require.Equal(t, "https://custom.stackit.cloud/dns", cfg.ServiceAccountBaseUrl)
+	})
 }
 
 func TestDefaultConfigProvider_LoadConfigNamespaceFile(t *testing.T) {
@@ -152,13 +162,15 @@ func TestGetRepositoryConfig_WithSaKeyPath(t *testing.T) {
 	}
 
 	cfg := &StackitDnsProviderConfig{
-		ApiBasePath: "https://api.stackit.cloud",
-		ProjectId:   "test-project",
+		ApiBasePath:           "https://api.stackit.cloud",
+		ProjectId:             "test-project",
+		ServiceAccountBaseUrl: "https://sa-custom.stackit.cloud",
 	}
 
 	config, err := r.getRepositoryConfig(cfg)
 	require.NoError(t, err)
 	require.Equal(t, saKeyPath, config.SaKeyPath)
+	require.Equal(t, "https://sa-custom.stackit.cloud", config.ServiceAccountBaseUrl)
 	require.True(t, config.UseSaKey)
 }
 

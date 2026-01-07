@@ -13,7 +13,7 @@ import (
 func TestStringFromSecret(t *testing.T) {
 	t.Parallel()
 
-	client := fake.NewSimpleClientset(&corev1.Secret{
+	client := fake.NewClientset(&corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-secret",
 			Namespace: "test-namespace",

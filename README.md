@@ -22,17 +22,11 @@ helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-
 
 ## Usage
 
-1. ***Initiation of STACKIT Authentication Token Secret:***
+1. ***Initiation of STACKIT Service Account Secret:***
     ```bash
     kubectl create secret generic stackit-sa-authentication \
       -n cert-manager \
-      --from-literal=auth-token=<STACKIT AUTH TOKEN>
-    ```
-   Or alternatively we can utilize the STACKIT service account path authentication:
-      ```
-    kubectl create secret generic stackit-sa-authentication \
-        -n cert-manager \
-        --from-literal=sa.json='{
+      --from-literal=sa.json='{
       "id": "4e1fe486-b463-4bcd-9210-288854268e34",
       "publicKey": "-----BEGIN PUBLIC KEY-----\nPUBLIC_KEY\n-----END PUBLIC KEY-----",
       "createdAt": "2024-04-02T13:12:17.678+00:00",
@@ -80,14 +74,7 @@ helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-
                 projectId: <STACKIT PROJECT ID>
     ```
 
-   For diverse project architectures where zones are spread across varying projects, necessitating distinct
-   authentication tokens per project, the Issuer configuration becomes pertinent. This approach inherently
-   tethers namespaces to individual projects.
-    ```bash
-    kubectl create secret generic stackit-cert-manager-webhook \
-      --namespace=default \
-      --from-literal=auth-token=<STACKIT AUTH TOKEN>
-    ```
+   For diverse project architectures where zones are spread across varying projects, use an Issuer (namespaces are separate):
     ```yaml
     apiVersion: cert-manager.io/v1
     kind: Issuer
@@ -107,10 +94,9 @@ helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-
               groupName: acme.stackit.de
               config:
                 projectId: <STACKIT PROJECT ID>
-                authTokenSecretNamespace: default
     ```
-   *Note:* Ensure the creation of an authentication token secret within the namespace linked to the issuer.
-   The secret must be vested with permissions to access zones in the stipulated project configuration.
+   *Note:* Ensure your service account secret (sa.json) is created in the namespace linked to the issuer so the webhook can access the project resources.
+
 3. ***Demonstration of Ingress Integration with Wildcard SSL/TLS Certificate Generation***   
    Given the preceding configuration, it is possible to exploit the capabilities of the Issuer or ClusterIssuer to
    dynamically produce wildcard SSL/TLS certificates in the following manner:
@@ -181,9 +167,6 @@ spec:
           config:
             projectId: string
             apiBasePath: string
-            authTokenSecretRef: string
-            authTokenSecretKey: string
-            authTokenSecretNamespace: string
             serviceAccountKeyPath: string
             serviceAccountBaseUrl: string
             acmeTxtRecordTTL: int64
@@ -191,10 +174,6 @@ spec:
 
 - projectId: The unique identifier for the STACKIT project.
 - apiBasePath: The base path for the STACKIT DNS API. (Default: https://dns.api.stackit.cloud)
-- authTokenSecretRef: The reference to the secret containing the STACKIT authentication token. (Default:
-  stackit-cert-manager-webhook)
-- authTokenSecretKey: The key within the secret containing the STACKIT authentication token. (Default: auth-token)
-- authTokenSecretNamespace: The namespace of the secret containing the STACKIT authentication token. (Default: cert-manager)
 - serviceAccountKeyPath: The path to the service account key file. The file must be mounted into the container.
 - serviceAccountBaseUrl: The base URL for the STACKIT service account API. (Default: https://service-account.api.stackit.cloud/token)
 - acmeTxtRecordTTL: The TTL for the ACME TXT record. (Default: 600)

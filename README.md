@@ -95,7 +95,19 @@ helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-
               config:
                 projectId: <STACKIT PROJECT ID>
     ```
-   *Note:* Ensure your service account secret (sa.json) is created in the namespace linked to the issuer so the webhook can access the project resources.
+   *Note on service accounts and namespaces:*
+   - Issuer-per-namespace (recommended for isolation): create a STACKIT service-account key (sa.json) for each STACKIT project you need to manage and place that key in a Kubernetes Secret in the same namespace as the Issuer. This means one sa.json (one SA key) per Issuer/namespace when the Issuers target different STACKIT projects.
+     Example (create a secret in the Issuer namespace):
+     ```bash
+     kubectl create secret generic stackit-sa-authentication \
+       -n <issuer-namespace> \
+       --from-literal=sa.json='{"id":"...","credentials":{...}}'
+     ```
+     Ensure the webhook can read the secret in that namespace (create the secret where the Issuer lives).
+   - Alternative (single SA key for multiple projects): you can grant the service account broader permissions at folder or organization level so one sa.json can manage zones across multiple projects. This is more convenient but grants wider access — evaluate security and follow least-privilege principles.
+   - Tradeoffs:
+     - Per-namespace/per-project SA keys: better isolation and least privilege, easier to rotate keys per project.
+     - Folder/org-level SA key: lower operational overhead (single key), but larger blast radius if compromised.
 
 3. ***Demonstration of Ingress Integration with Wildcard SSL/TLS Certificate Generation***   
    Given the preceding configuration, it is possible to exploit the capabilities of the Issuer or ClusterIssuer to

@@ -11,9 +11,9 @@ toolchain go1.25.6
 replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.7.0
 
 require (
-	github.com/cert-manager/cert-manager v1.19.2
-	github.com/stackitcloud/stackit-sdk-go/core v0.21.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.4
+	github.com/cert-manager/cert-manager v1.19.3
+	github.com/stackitcloud/stackit-sdk-go/core v0.21.1
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.6
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.27.1
@@ -48,7 +48,7 @@ require (
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.26.0 // indirect

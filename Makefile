@@ -1,4 +1,6 @@
-GOLANGCI_VERSION = 2.6.1
+# https://github.com/golangci/golangci-lint/releases
+GOLANGCI_VERSION = 2.8.0
+# https://github.com/norwoodj/helm-docs/releases
 HELM_DOCS_VERSION = 1.14.2
 LICENCES_IGNORE_LIST = $(shell cat licenses/licenses-ignore-list.txt)
 

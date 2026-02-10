@@ -82,7 +82,7 @@ func (s *stackitDnsProviderResolver) Present(ch *v1alpha1.ChallengeRequest) erro
 		return err
 	}
 
-	return s.updateExistingRRSet(initResolverRes, rrSet)
+	return s.updateExistingRRSet(initResolverRes, rrSet, ch.Key)
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -384,11 +384,30 @@ func (s *stackitDnsProviderResolver) handleRRSetNotFound(
 	return nil
 }
 
+func keyExists(records *[]stackitdnsclient.Record, challengeKey string) bool {
+	for _, record := range *records {
+		if record.Content != nil && *record.Content == challengeKey {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *stackitDnsProviderResolver) updateExistingRRSet(
 	initResolverRes *initResolverContextResult,
 	rrSet *stackitdnsclient.RecordSet,
+	challengeKey string,
 ) error {
 	s.logger.Info("RRSet found, updating RRSet", zap.String("rrSetName", initResolverRes.rrSetName))
+
+	if !keyExists(rrSet.Records, challengeKey) {
+		s.logger.Info("Challenge key not found in existing RRSet, adding new record", zap.String("rrSetName", initResolverRes.rrSetName))
+		newRecord := stackitdnsclient.Record{
+			Content: &challengeKey,
+		}
+		*rrSet.Records = append(*rrSet.Records, newRecord)
+	}
 
 	rrSet.Ttl = &initResolverRes.acmeTxtDefaultTTL
 

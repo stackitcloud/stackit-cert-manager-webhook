@@ -1,20 +1,22 @@
-# variables
 CLUSTER_NAME := stackit-webhook-dev
-KIND_KUBECONFIG := $(HOME)/.kube/config
+KUBECONFIG ?= $(HOME)/.kube/config # supposed to be the kind kubeconfig
+GROUP_NAME := acme.stackit.de
+
+## -- Foundation --
+
 CERT_MANAGER_VERSION := v1.13.3
 
-.PHONY: cluster-up cluster-down install-cert-manager status
-
-## -- Iteration 1: Foundation --
-
+.PHONY: cluster-up
 cluster-up:
 	@echo "spinning up kind cluster..."
 	kind create cluster --name $(CLUSTER_NAME)
 
+.PHONY: cluster-down
 cluster-down:
 	@echo "destroying kind cluster..."
 	kind delete cluster --name $(CLUSTER_NAME)
 
+.PHONY: install-cert-manager
 install-cert-manager:
 	@echo "installing cert-manager..."
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
@@ -24,7 +26,7 @@ install-cert-manager:
 		--all \
 		--timeout=90s
 
-## -- The "Helm Hijack" Local Dev Setup --
+## -- "Helm Hijack" Local Dev Setup --
 
 HELM_CHART_PATH ?= ../deploy/stackit
 RELEASE_NAME ?= stackit-webhook
@@ -57,19 +59,48 @@ setup-local-helm:
 
 	@echo "5. waiting for certificate generation and patching APIService..."
 	@kubectl wait --namespace $(NAMESPACE) --for=condition=ready certificate local-dev-webhook-cert --timeout=60s
-	@kubectl annotate apiservice v1alpha1.acme.stackit.de cert-manager.io/inject-ca-from=$(NAMESPACE)/local-dev-webhook-cert --overwrite
+	@kubectl annotate apiservice v1alpha1.$(GROUP_NAME) cert-manager.io/inject-ca-from=$(NAMESPACE)/local-dev-webhook-cert --overwrite
 
 	@echo "6. extracting the perfect certificates to ./certs/..."
 	@mkdir -p certs
 	@kubectl get secret local-dev-webhook-tls -n $(NAMESPACE) --template='{{ index .data "tls.crt" | base64decode }}' > certs/tls.crt
 	@kubectl get secret local-dev-webhook-tls -n $(NAMESPACE) --template='{{ index .data "tls.key" | base64decode }}' > certs/tls.key
 
-	@echo "✅ helm hijack complete! you can now run 'make run-webhook'."
+	@echo "✅ helm setup complete! you can now run the webhook locally."
 
-## -- Iteration 4: Trigger the Webhook --
+## -- Run the Webhook Locally --
+
+# note: if you run the makefile from a subdirectory but execute from root, adjust this to local-setup/certs
+CERTS_DIR := certs
+WEBHOOK_ENTRYPOINT := ../cmd/webhook/main.go
+
+.PHONY: run-webhook
+run-webhook:
+	@echo "pre-flight check: verifying local certificates..."
+	@if [ ! -f "$(CERTS_DIR)/tls.crt" ] || [ ! -f "$(CERTS_DIR)/tls.key" ]; then \
+		echo "❌ error: certificates not found in $(CERTS_DIR)/. please run 'make setup-local-helm' first."; \
+		exit 1; \
+	fi
+	@echo "pre-flight check: verifying kubeconfig..."
+	@if [ ! -f "$(KUBECONFIG)" ]; then \
+		echo "❌ error: kubeconfig not found at $(KUBECONFIG). did you run 'make cluster-up'?"; \
+		exit 1; \
+	fi
+	@echo "🚀 starting stackit webhook locally on port 8443..."
+	GROUP_NAME=$(GROUP_NAME) go run $(WEBHOOK_ENTRYPOINT) \
+		--tls-cert-file=$(CERTS_DIR)/tls.crt \
+		--tls-private-key-file=$(CERTS_DIR)/tls.key \
+		--secure-port=8443 \
+		--kubeconfig=$(KUBECONFIG) \
+		--authentication-kubeconfig=$(KUBECONFIG) \
+		--authorization-kubeconfig=$(KUBECONFIG)
+
+
+## -- Trigger the Webhook --
 
 API_BASE_PATH ?= https://dns.api.stackit.cloud
 
+.PHONY: test-webhook
 test-webhook:
 	@if [ -z "$(PROJECT_ID)" ]; then echo "❌ error: PROJECT_ID is required."; exit 1; fi
 	@if [ -z "$(AUTH_TOKEN)" ]; then echo "❌ error: AUTH_TOKEN is required."; exit 1; fi
@@ -83,11 +114,3 @@ test-webhook:
 	     -e 's|EMAIL_PLACEHOLDER|$(EMAIL)|g' \
 	     test-resources.yaml.tmpl | kubectl apply -f -
 	@echo "✅ test resources applied! watch your webhook logs."
-
-test-status:
-	@echo "checking challenge status..."
-	kubectl get challenges,orders,certificates -n default
-
-status:
-	@echo "checking cluster and cert-manager status..."
-	kubectl get pods -n cert-manager

@@ -1,0 +1,20 @@
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.acme.stackit.de
+  annotations:
+    # This magic annotation tells cert-manager to automatically inject the CA
+    # from the certificate we created in iteration 2!
+    cert-manager.io/inject-ca-from: default/stackit-test-cert
+    # Wait, in iteration 2 our local webhook cert was named `stackit-webhook-cert`. Let's use that one!
+    cert-manager.io/inject-ca-from: default/stackit-webhook-cert
+spec:
+  group: acme.stackit.de
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: stackit-webhook
+    namespace: default
+    port: 443
+  version: v1alpha1

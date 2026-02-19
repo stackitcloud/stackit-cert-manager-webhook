@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stackit-credentials
+  namespace: default
+stringData:
+  # If you have a real token use it, otherwise a fake one is fine
+  # to verify the "Update" vs "Create" logic in the logs.
+  authToken: "fake-token-for-testing"
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: stackit-issuer
+spec:
+  acme:
+    email: test@example.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: stackit-acme-private-key
+    solvers:
+      - dns01:
+          webhook:
+            groupName: stackit.cloud # Verify this matches your webhook's groupName
+            solverName: stackit        # Verify this matches your solver name
+            config:
+              authTokenSecretRef:
+                name: stackit-credentials
+                key: authToken
+              projectId: "test-project-id"
+---
+# Alice's Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: alice-cert
+  namespace: default
+spec:
+  dnsNames:
+    - alice.example.com
+  issuerRef:
+    name: stackit-issuer
+    kind: ClusterIssuer
+  secretName: alice-tls
+---
+# Bob's Certificate (The one that was failing)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: bob-cert
+  namespace: default
+spec:
+  dnsNames:
+    - bob.example.com
+  issuerRef:
+    name: stackit-issuer
+    kind: ClusterIssuer
+  secretName: bob-tls

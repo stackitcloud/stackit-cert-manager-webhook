@@ -1,0 +1,48 @@
+---
+# 1. Secret to securely hold your Stackit API Token
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stackit-local-dev-secret
+  namespace: default
+stringData:
+  token: AUTH_TOKEN_PLACEHOLDER
+---
+# 2. The Issuer
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: stackit-test-issuer
+  namespace: default
+spec:
+  acme:
+    # We still use Let's Encrypt staging so you don't burn production rate limits while testing!
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: EMAIL_PLACEHOLDER
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+    - dns01:
+        webhook:
+          groupName: acme.stackit.de
+          solverName: stackit
+          config:
+            apiBasePath: API_BASE_PATH_PLACEHOLDER
+            projectId: PROJECT_ID_PLACEHOLDER
+            authTokenSecretRef: stackit-local-dev-secret
+            authTokenSecretKey: token
+            authTokenSecretNamespace: default
+---
+# 3. The Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: stackit-test-cert
+  namespace: default
+spec:
+  secretName: test-domain-tls
+  dnsNames:
+  - "DOMAIN_PLACEHOLDER"
+  issuerRef:
+    name: stackit-test-issuer
+    kind: Issuer

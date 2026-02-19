@@ -24,36 +24,42 @@ install-cert-manager:
 		--all \
 		--timeout=90s
 
-## -- Iteration 2: Certificates (The Native Way) --
+## -- The "Helm Hijack" Local Dev Setup --
 
-gen-certs:
-	@echo "asking cert-manager to generate certificates..."
-	kubectl apply -f webhook-certs.yaml
-	@echo "waiting for certificate to be ready..."
-	kubectl wait --namespace default \
-		--for=condition=ready certificate \
-		stackit-webhook-cert \
-		--timeout=30s
-	@echo "extracting certificates to ./certs/..."
-	@mkdir -p certs
-	kubectl get secret stackit-webhook-tls -n default \
-		--template='{{ index .data "tls.crt" | base64decode }}' > certs/tls.crt
-	kubectl get secret stackit-webhook-tls -n default \
-		--template='{{ index .data "tls.key" | base64decode }}' > certs/tls.key
-	@echo "✅ certificates successfully extracted to ./certs/"
+HELM_CHART_PATH ?= ../deploy/stackit
+RELEASE_NAME ?= stackit-webhook
+NAMESPACE ?= cert-manager
 
-## -- Iteration 3: The Network Bridge --
+setup-local-helm:
+	@echo "1. installing the official helm chart (replicas=0)..."
+	helm upgrade --install $(RELEASE_NAME) $(HELM_CHART_PATH) \
+		--namespace $(NAMESPACE) \
+		--set replicaCount=0
 
-bridge-up:
-	@echo "detecting host IP via host.docker.internal..."
-	$(eval HOST_IP=$(shell docker exec $(CLUSTER_NAME)-control-plane getent hosts host.docker.internal | awk '{ print $$1 }'))
-	@echo "host IP detected as $(HOST_IP)"
-	@echo "creating Service and Endpoints to route traffic to $(HOST_IP):8443..."
-	@sed 's/HOST_IP_PLACEHOLDER/$(HOST_IP)/g' webhook-bridge.yaml.tmpl | kubectl apply -f -
-	@echo "✅ network bridge established."
+	@echo "2. dynamically discovering and patching the Service..."
+	@SVC_NAME=$$(kubectl get svc -n $(NAMESPACE) -l release=$(RELEASE_NAME) -o jsonpath='{.items[0].metadata.name}'); \
+	echo "   -> found service: $$SVC_NAME"; \
+	kubectl patch svc $$SVC_NAME -n $(NAMESPACE) --type='json' -p='[{"op": "remove", "path": "/spec/selector"}]'
 
-bridge-status:
-	@kubectl get endpoints stackit-webhook -n default
+	@echo "3. bridging the Service to your laptop..."
+	@HOST_IP=$$(docker exec $(CLUSTER_NAME)-control-plane getent hosts host.docker.internal | awk '{ print $$1 }'); \
+	SVC_NAME=$$(kubectl get svc -n $(NAMESPACE) -l release=$(RELEASE_NAME) -o jsonpath='{.items[0].metadata.name}'); \
+	sed -e "s/RELEASE_NAME_PLACEHOLDER/$$SVC_NAME/g" \
+	    -e "s/NAMESPACE_PLACEHOLDER/$(NAMESPACE)/g" \
+	    -e "s/HOST_IP_PLACEHOLDER/$$HOST_IP/g" \
+	    webhook-endpoints.yaml.tmpl | kubectl apply -f -
+
+	@echo "4. dynamically discovering and waiting for the TLS Certificate..."
+	@CERT_NAME=$$(kubectl get certificate -n $(NAMESPACE) -l release=$(RELEASE_NAME) -o jsonpath='{.items[0].metadata.name}'); \
+	echo "   -> found certificate: $$CERT_NAME"; \
+	kubectl wait --namespace $(NAMESPACE) --for=condition=ready certificate/$$CERT_NAME --timeout=60s; \
+	SECRET_NAME=$$(kubectl get certificate $$CERT_NAME -n $(NAMESPACE) -o jsonpath='{.spec.secretName}'); \
+	echo "   -> extracting certs from secret: $$SECRET_NAME"; \
+	mkdir -p certs; \
+	kubectl get secret $$SECRET_NAME -n $(NAMESPACE) --template='{{ index .data "tls.crt" | base64decode }}' > certs/tls.crt; \
+	kubectl get secret $$SECRET_NAME -n $(NAMESPACE) --template='{{ index .data "tls.key" | base64decode }}' > certs/tls.key
+
+	@echo "✅ helm hijack complete! you can now run 'make run-webhook'."
 
 ## -- Iteration 4: Trigger the Webhook --
 

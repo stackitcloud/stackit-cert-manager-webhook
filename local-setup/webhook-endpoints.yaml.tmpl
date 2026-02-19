@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  # This must exactly match the name of the Service created by Helm
+  name: RELEASE_NAME_PLACEHOLDER
+  namespace: NAMESPACE_PLACEHOLDER
+subsets:
+  - addresses:
+      - ip: HOST_IP_PLACEHOLDER
+    ports:
+      # We map to 8443, which is the port your local Go process listens on
+      - port: 8443
+        name: https

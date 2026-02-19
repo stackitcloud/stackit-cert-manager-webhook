@@ -1,0 +1,21 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: local-dev-webhook-issuer
+  namespace: NAMESPACE_PLACEHOLDER
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: local-dev-webhook-cert
+  namespace: NAMESPACE_PLACEHOLDER
+spec:
+  dnsNames:
+    # This is the crucial SAN the Kubernetes API server expects
+    - SVC_NAME_PLACEHOLDER.NAMESPACE_PLACEHOLDER.svc
+  secretName: local-dev-webhook-tls
+  issuerRef:
+    name: local-dev-webhook-issuer

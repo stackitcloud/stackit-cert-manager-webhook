@@ -49,15 +49,20 @@ setup-local-helm:
 	    -e "s/HOST_IP_PLACEHOLDER/$$HOST_IP/g" \
 	    webhook-endpoints.yaml.tmpl | kubectl apply -f -
 
-	@echo "4. dynamically discovering and waiting for the TLS Certificate..."
-	@CERT_NAME=$$(kubectl get certificate -n $(NAMESPACE) -l release=$(RELEASE_NAME) -o jsonpath='{.items[0].metadata.name}'); \
-	echo "   -> found certificate: $$CERT_NAME"; \
-	kubectl wait --namespace $(NAMESPACE) --for=condition=ready certificate/$$CERT_NAME --timeout=60s; \
-	SECRET_NAME=$$(kubectl get certificate $$CERT_NAME -n $(NAMESPACE) -o jsonpath='{.spec.secretName}'); \
-	echo "   -> extracting certs from secret: $$SECRET_NAME"; \
-	mkdir -p certs; \
-	kubectl get secret $$SECRET_NAME -n $(NAMESPACE) --template='{{ index .data "tls.crt" | base64decode }}' > certs/tls.crt; \
-	kubectl get secret $$SECRET_NAME -n $(NAMESPACE) --template='{{ index .data "tls.key" | base64decode }}' > certs/tls.key
+	@echo "4. generating a strictly valid TLS Certificate for the bridge..."
+	@SVC_NAME=$$(kubectl get svc -n $(NAMESPACE) -l release=$(RELEASE_NAME) -o jsonpath='{.items[0].metadata.name}'); \
+	sed -e "s/SVC_NAME_PLACEHOLDER/$$SVC_NAME/g" \
+	    -e "s/NAMESPACE_PLACEHOLDER/$(NAMESPACE)/g" \
+	    webhook-local-cert.yaml.tmpl | kubectl apply -f -
+
+	@echo "5. waiting for certificate generation and patching APIService..."
+	@kubectl wait --namespace $(NAMESPACE) --for=condition=ready certificate local-dev-webhook-cert --timeout=60s
+	@kubectl annotate apiservice v1alpha1.acme.stackit.de cert-manager.io/inject-ca-from=$(NAMESPACE)/local-dev-webhook-cert --overwrite
+
+	@echo "6. extracting the perfect certificates to ./certs/..."
+	@mkdir -p certs
+	@kubectl get secret local-dev-webhook-tls -n $(NAMESPACE) --template='{{ index .data "tls.crt" | base64decode }}' > certs/tls.crt
+	@kubectl get secret local-dev-webhook-tls -n $(NAMESPACE) --template='{{ index .data "tls.key" | base64decode }}' > certs/tls.key
 
 	@echo "✅ helm hijack complete! you can now run 'make run-webhook'."
 

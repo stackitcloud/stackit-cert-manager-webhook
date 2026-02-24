@@ -11,6 +11,12 @@
     {
       "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
       "automerge": true
+    },
+    {
+      "matchPackagePrefixes": ["k8s.io/"],
+      "allowedVersions": "<0.35.0",
+      "groupName": "kubernetes packages",
+      "description": "Hold back K8s upgrades until cert-manager supports v0.35.0 to prevent OpenAPI TypeMeta runtime panics"
     }
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"]

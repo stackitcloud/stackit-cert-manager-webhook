@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
@@ -97,7 +98,7 @@ func (s *stackitDnsProviderResolver) CleanUp(ch *v1alpha1.ChallengeRequest) erro
 		return s.handleErrorDuringInitialization(err)
 	}
 
-	return s.handleRRSetCleanup(initResolverRes)
+	return s.handleRRSetCleanup(initResolverRes, ch.Key)
 }
 
 // Initialize will be called when the webhook first starts.
@@ -287,6 +288,7 @@ func (s *stackitDnsProviderResolver) handleErrorDuringInitialization(
 
 func (s *stackitDnsProviderResolver) handleRRSetCleanup(
 	initResolverRes *initResolverContextResult,
+	challengeKey string,
 ) error {
 	s.logger.Info("Cleaning up RRSet", zap.String("rrSetName", initResolverRes.rrSetName))
 
@@ -299,7 +301,27 @@ func (s *stackitDnsProviderResolver) handleRRSetCleanup(
 		return s.handleFetchRRSetError(err, initResolverRes.rrSetName)
 	}
 
-	return s.deleteRRSet(initResolverRes.rrSetRepository, rrSet, initResolverRes.rrSetName)
+	if rrSet == nil || rrSet.Records == nil || len(*rrSet.Records) == 0 {
+		return s.deleteRRSet(initResolverRes.rrSetRepository, rrSet, initResolverRes.rrSetName)
+	}
+
+	originalLen := len(*rrSet.Records)
+
+	*rrSet.Records = slices.DeleteFunc(*rrSet.Records, func(r stackitdnsclient.Record) bool {
+		return r.Content != nil && *r.Content == challengeKey
+	})
+
+	if len(*rrSet.Records) == originalLen {
+		s.logger.Info("Challenge key not found in RRSet records, nothing to clean up", zap.String("rrSetName", initResolverRes.rrSetName))
+
+		return nil
+	}
+
+	if len(*rrSet.Records) == 0 {
+		return s.deleteRRSet(initResolverRes.rrSetRepository, rrSet, initResolverRes.rrSetName)
+	}
+
+	return initResolverRes.rrSetRepository.UpdateRRSet(s.ctx, *rrSet)
 }
 
 func (s *stackitDnsProviderResolver) handleFetchRRSetError(err error, rrSetName string) error {

@@ -1,32 +1,37 @@
 # stackit-cert-manager-webhook
 
-![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-informational?style=flat-square) ![AppVersion: 1.0](https://img.shields.io/badge/AppVersion-1.0-informational?style=flat-square)
+![Version: 0.4.1](https://img.shields.io/badge/Version-0.4.1-informational?style=flat-square) ![AppVersion: v0.4.1](https://img.shields.io/badge/AppVersion-v0.4.1-informational?style=flat-square)
 
-A Helm chart for Kubernetes
+A Helm chart for stackitcloud/stackit-cert-manager-webhook
 
 ## Values
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| additionalVolumeMounts | list | `[]` |  |
+| additionalVolumes | list | `[]` |  |
 | affinity | object | `{}` |  |
 | certManager | object | `{"namespace":"cert-manager","serviceAccountName":"cert-manager"}` | Meta information of the cert-manager itself. |
 | certManager.namespace | string | `"cert-manager"` | namespace where the webhook should be installed. Cert-Manager and the webhook should be in the same namespace. |
 | certManager.serviceAccountName | string | `"cert-manager"` | service account name for the cert-manager. |
+| extraEnv | list | `[]` | delete the next line and add your variables as in the commented example below. |
 | fullnameOverride | string | `""` | Fullname override of the webhook. |
 | groupName | string | `"acme.stackit.de"` | The GroupName here is used to identify your company or business unit that created this webhook. Therefore, it should be acme.stackit.de. |
-| image | object | `{"pullPolicy":"IfNotPresent","repository":"ghcr.io/stackitcloud/stackit-cert-manager-webhook","tag":"latest"}` | Image information for the webhook. |
+| image | object | `{"pullPolicy":"IfNotPresent","repository":"ghcr.io/stackitcloud/stackit-cert-manager-webhook","tag":""}` | Image information for the webhook. |
 | image.pullPolicy | string | `"IfNotPresent"` | pull policy of the image. |
 | image.repository | string | `"ghcr.io/stackitcloud/stackit-cert-manager-webhook"` | repository of the image. |
-| image.tag | string | `"latest"` | tag of the image. |
+| imagePullSecrets | list | `[]` |  |
 | nameOverride | string | `""` | Webhook configuration. |
 | nodeSelector | object | `{}` | Node selector for the webhook. |
 | podSecurityContext.runAsGroup | int | `1000` |  |
 | podSecurityContext.runAsNonRoot | bool | `true` |  |
 | podSecurityContext.runAsUser | int | `1000` |  |
+| podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | replicaCount | int | `1` | Replicas for the webhook. Since it is a stateless application server that sends requests you can increase the number as you want. Most of the time however, 1 replica is enough. |
 | resources | object | `{}` | Kubernetes resources for the webhook. Usually limits.cpu=100m, limits.memory=128Mi, requests.cpu=100m, requests.memory=128Mi is enough for the webhook. |
 | securityContext.allowPrivilegeEscalation | bool | `false` |  |
 | securityContext.capabilities.drop[0] | string | `"ALL"` |  |
+| securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | service | object | `{"port":443,"type":"ClusterIP"}` | Configuration for the webhook service. |
 | service.port | int | `443` | port of the service. |
 | service.type | string | `"ClusterIP"` | type of the service. |

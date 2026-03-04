@@ -185,11 +185,8 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 func (s *stackitDnsProviderResolver) createRRSet(
 	initResolverRes *initResolverContextResult, key string,
 ) error {
-	comment := "This record set is managed by stackit-cert-manager-webhook"
-	rrSetType := typeTxtRecord
-
 	rrSet := stackitdnsclient.RecordSet{
-		Comment: &comment,
+		Comment: new("This record set is managed by stackit-cert-manager-webhook"),
 		Name:    &initResolverRes.rrSetName,
 		Records: &[]stackitdnsclient.Record{
 			{
@@ -197,7 +194,7 @@ func (s *stackitDnsProviderResolver) createRRSet(
 			},
 		},
 		Ttl:  &initResolverRes.acmeTxtDefaultTTL,
-		Type: stackitdnsclient.RecordSetGetTypeAttributeType(&rrSetType),
+		Type: stackitdnsclient.RecordSetGetTypeAttributeType(new(typeTxtRecord)),
 	}
 
 	s.logger.Info("Creating RRSet", zap.String("rrSet", fmt.Sprintf("%+v", rrSet)))

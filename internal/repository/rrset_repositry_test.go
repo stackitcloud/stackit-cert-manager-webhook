@@ -72,22 +72,16 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 
 	t.Run("UpdateRRSet success", func(t *testing.T) {
 		t.Parallel()
-		comment := "comment1"
-		id := "0000"
-		name := "test.com."
-		ttl := int64(60)
-		content := "content1"
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "2222")
 		require.NoError(t, err)
 		err = rrSetRepository.UpdateRRSet(
 			ctx,
 			stackitdnsclient.RecordSet{
-				Comment: &comment,
-				Id:      &id,
-				Name:    &name,
-				Ttl:     &ttl,
-				Records: &[]stackitdnsclient.Record{{Content: &content}},
+				Comment: new("comment1"),
+				Id:      new("0000"),
+				Name:    new("test.com."),
+				Ttl:     new(int64(60)),
+				Records: &[]stackitdnsclient.Record{{Content: new("content1")}},
 			},
 		)
 		require.NoError(t, err)
@@ -95,22 +89,16 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 
 	t.Run("UpdateRRSet failure", func(t *testing.T) {
 		t.Parallel()
-		comment := "comment2"
-		id := "2222"
-		name := "test.com."
-		ttl := int64(60)
-		content := "content2"
-
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "3333")
 		require.NoError(t, err)
 		err = rrSetRepository.UpdateRRSet(
 			ctx,
 			stackitdnsclient.RecordSet{
-				Comment: &comment,
-				Id:      &id,
-				Name:    &name,
-				Ttl:     &ttl,
-				Records: &[]stackitdnsclient.Record{{Content: &content}},
+				Comment: new("comment2"),
+				Id:      new("2222"),
+				Name:    new("test.com."),
+				Ttl:     new(int64(60)),
+				Records: &[]stackitdnsclient.Record{{Content: new("content2")}},
 			},
 		)
 		require.Error(t, err)

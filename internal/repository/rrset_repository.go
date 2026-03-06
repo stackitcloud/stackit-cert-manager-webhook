@@ -135,8 +135,7 @@ func (r *rrSetRepository) UpdateRRSet(
 func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error {
 	_, err := r.apiClient.DeleteRecordSet(ctx, r.projectId, r.zoneId, rrSetId).Execute()
 	if err != nil {
-		var oapiError *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiError) {
+		if oapiError, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
 			if oapiError.StatusCode == 404 || oapiError.StatusCode == 400 {
 				return ErrRRSetNotFound
 			}

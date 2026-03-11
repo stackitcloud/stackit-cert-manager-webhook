@@ -98,3 +98,27 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+sboms:
+  - artifacts: archive
+
+# sign checksums/archives using Cosign
+signs:
+  - artifacts: checksum
+    cmd: cosign
+    args:
+      - "sign-blob"
+      - "--key=env://COSIGN_PRIVATE_KEY"
+      - "--output-signature=${signature}"
+      - "--yes"
+      - "${artifact}"
+
+# sign published Docker images using Cosign
+docker_signs:
+  - artifacts: manifests
+    cmd: cosign
+    args:
+      - "sign"
+      - "--key=env://COSIGN_PRIVATE_KEY"
+      - "--yes"
+      - "${artifact}"

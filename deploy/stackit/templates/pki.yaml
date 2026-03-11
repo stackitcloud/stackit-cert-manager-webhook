@@ -34,6 +34,10 @@ spec:
     name: {{ include "stackit-cert-manager-webhook.selfSignedIssuer" . }}
   commonName: "ca.stackit-cert-manager-webhook.cert-manager"
   isCA: true
+  privateKey:
+    # Default changed from "Never" to "Always" in cert-manager >= 1.18, ensure
+    # for now that the behavior does not change when cert-manager is updated.
+    rotationPolicy: Never
 
 ---
 
@@ -74,3 +78,7 @@ spec:
     - {{ include "stackit-cert-manager-webhook.fullname" . }}
     - {{ include "stackit-cert-manager-webhook.fullname" . }}.{{ .Release.Namespace }}
     - {{ include "stackit-cert-manager-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
+  privateKey:
+    # Default changed from "Never" to "Always" in cert-manager >= 1.18, ensure
+    # for now that the behavior does not change when cert-manager is updated.
+    rotationPolicy: Never

@@ -25,7 +25,7 @@ builds:
 source:
   enabled: true
 archives:
-  - format: tar.gz
+  - formats: ["tar.gz"]
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
@@ -37,55 +37,25 @@ archives:
     # use zip for windows archives
     format_overrides:
       - goos: windows
-        format: zip
-dockers:
-  - id: stackit-cert-manager-webhook-amd64
-    use: buildx
-    image_templates:
-      - "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:{{ .Tag }}-amd64"
-    goos: linux
-    goarch: amd64
-    build_flag_templates:
-      - --label=org.opencontainers.image.title={{ .ProjectName }}
-      - --label=org.opencontainers.image.description=stackit cert manager webhook for dns01 challenges
-      - --label=org.opencontainers.image.url=https://{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY}}
-      - --label=org.opencontainers.image.source=https://{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY}}
-      - --label=org.opencontainers.image.version={{ .Version }}
-      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
-      - --label=org.opencontainers.image.revision={{ .FullCommit }}
-      - --label=org.opencontainers.image.licenses=Apache-2.0
-      - --platform=linux/amd64
-    skip_push: false
-
-  - id: stackit-cert-manager-webhook-arm64
-    use: buildx
-    image_templates:
-      - "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:{{ .Tag }}-arm64"
-    goos: linux
-    goarch: arm64
-    build_flag_templates:
-      - --label=org.opencontainers.image.title={{ .ProjectName }}
-      - --label=org.opencontainers.image.description=stackit cert manager webhook for dns01 challenges
-      - --label=org.opencontainers.image.url=https://{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY}}
-      - --label=org.opencontainers.image.source=https://{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY}}
-      - --label=org.opencontainers.image.version={{ .Version }}
-      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
-      - --label=org.opencontainers.image.revision={{ .FullCommit }}
-      - --label=org.opencontainers.image.licenses=Apache-2.0
-      - --label=org.opencontainers.image.platform.os=linux
-      - --platform=linux/arm64
-    skip_push: false
-
-# https://goreleaser.com/cookbooks/multi-platform-docker-images
-docker_manifests:
-  - name_template: "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:{{ .Tag }}"
-    image_templates:
-      - "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:{{ .Tag }}-amd64"
-      - "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:{{ .Tag }}-arm64"
-  - name_template: "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:latest"
-    image_templates:
-      - "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:{{ .Tag }}-amd64"
-      - "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}:{{ .Tag }}-arm64"
+        formats: ["zip"]
+dockers_v2:
+  - images:
+      - "{{ .Env.REGISTRY }}/{{ .Env.IMAGE_NAME }}"
+    tags:
+      - "{{ .Tag }}"
+      - "latest"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.description": "stackit cert manager webhook for dns01 challenges"
+      "org.opencontainers.image.url": "https://{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY}}"
+      "org.opencontainers.image.source": "https://{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY}}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.created": '{{ time "2006-01-02T15:04:05Z07:00" }}'
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.licenses": "Apache-2.0"
 
 checksum:
   disable: false
@@ -110,13 +80,13 @@ signs:
       - "sign-blob"
       - "--key=env://COSIGN_PRIVATE_KEY"
       - "--output-signature=${signature}"
+      - "--bundle=${artifact}.bundle"
       - "--yes"
       - "${artifact}"
 
 # sign published Docker images using Cosign
 docker_signs:
-  - artifacts: manifests
-    cmd: cosign
+  - cmd: cosign
     args:
       - "sign"
       - "--key=env://COSIGN_PRIVATE_KEY"

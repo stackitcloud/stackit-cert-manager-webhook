@@ -74,11 +74,15 @@ clean:
 
 GO_RELEASER = bin/goreleaser
 $(GO_RELEASER):
-	GOBIN=$(PWD)/bin go install github.com/goreleaser/goreleaser@latest
+	GOBIN=$(PWD)/bin go install github.com/goreleaser/goreleaser/v2@latest
 
 .PHONY: release-check
 release-check: $(GO_RELEASER) ## Check if the release will work
-	GITHUB_SERVER_URL=github.com GITHUB_REPOSITORY=stackitcloud/stackit-cert-manager-webhook REGISTRY=$(REGISTRY) IMAGE_NAME=$(IMAGE_NAME) $(GO_RELEASER) release --snapshot --clean --skip-publish
+	GITHUB_SERVER_URL=github.com \
+	GITHUB_REPOSITORY=stackitcloud/stackit-cert-manager-webhook \
+	REGISTRY=ghcr.io \
+    IMAGE_NAME=stackitcloud/stackit-cert-manager-webhook \
+    $(GO_RELEASER) release --snapshot --clean --skip=sign
 
 GO_LICENSES = bin/go-licenses
 $(GO_LICENSES):

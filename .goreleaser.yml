@@ -102,13 +102,13 @@ changelog:
 sboms:
   - artifacts: archive
 
-# sign checksums/archives using Cosign
 signs:
   - artifacts: checksum
     cmd: cosign
+    certificate: "${artifact}.pem"
     args:
       - "sign-blob"
-      - "--key=env://COSIGN_PRIVATE_KEY"
+      - "--output-certificate=${certificate}"
       - "--output-signature=${signature}"
       - "--yes"
       - "${artifact}"
@@ -119,6 +119,5 @@ docker_signs:
     cmd: cosign
     args:
       - "sign"
-      - "--key=env://COSIGN_PRIVATE_KEY"
       - "--yes"
       - "${artifact}"

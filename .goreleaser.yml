@@ -102,16 +102,16 @@ changelog:
 sboms:
   - artifacts: archive
 
+# sign checksums/archives using Cosign
 signs:
   - artifacts: checksum
     cmd: cosign
-    certificate: "${artifact}.pem"
+    signature: "${artifact}.sigstore.json"
     args:
       - "sign-blob"
-      - "--output-certificate=${certificate}"
-      - "--output-signature=${signature}"
-      - "--yes"
+      - "--bundle=${signature}"
       - "${artifact}"
+      - "--yes"
 
 # sign published Docker images using Cosign
 docker_signs:

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
-	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 		require.NoError(t, err)
 		rrSet, err := rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
 		require.NoError(t, err)
-		require.Equal(t, *rrSet.Id, "1234")
+		require.Equal(t, rrSet.Id, "1234")
 	})
 
 	t.Run("FetchRRSetForZone failure", func(t *testing.T) {
@@ -78,10 +78,10 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 			ctx,
 			stackitdnsclient.RecordSet{
 				Comment: new("comment1"),
-				Id:      new("0000"),
-				Name:    new("test.com."),
-				Ttl:     new(int64(60)),
-				Records: &[]stackitdnsclient.Record{{Content: new("content1")}},
+				Id:      "0000",
+				Name:    "test.com.",
+				Ttl:     int32(60),
+				Records: []stackitdnsclient.Record{{Content: "content1"}},
 			},
 		)
 		require.NoError(t, err)
@@ -95,10 +95,10 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 			ctx,
 			stackitdnsclient.RecordSet{
 				Comment: new("comment2"),
-				Id:      new("2222"),
-				Name:    new("test.com."),
-				Ttl:     new(int64(60)),
-				Records: &[]stackitdnsclient.Record{{Content: new("content2")}},
+				Id:      "2222",
+				Name:    "test.com.",
+				Ttl:     int32(60),
+				Records: []stackitdnsclient.Record{{Content: "content2"}},
 			},
 		)
 		require.Error(t, err)

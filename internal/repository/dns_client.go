@@ -2,7 +2,7 @@ package repository
 
 import (
 	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
-	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 )
 
 func newStackitDnsClient(

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 )
 
 var ErrZoneNotFound = fmt.Errorf("zone not found")
@@ -49,14 +49,14 @@ func (z *zoneRepository) FetchZone(
 	ctx context.Context,
 	zoneDnsName string,
 ) (*stackitdnsclient.Zone, error) {
-	zoneResponse, err := z.apiClient.ListZones(ctx, z.projectId).ActiveEq(true).DnsNameEq(strings.ToLower(zoneDnsName)).Execute()
+	zoneResponse, err := z.apiClient.DefaultAPI.ListZones(ctx, z.projectId).ActiveEq(true).DnsNameEq(strings.ToLower(zoneDnsName)).Execute()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(*zoneResponse.Zones) == 0 {
+	if len(zoneResponse.Zones) == 0 {
 		return nil, ErrZoneNotFound
 	}
 
-	return &(*zoneResponse.Zones)[0], nil
+	return &zoneResponse.Zones[0], nil
 }

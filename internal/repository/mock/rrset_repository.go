@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	repository "github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
-	dns "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	v1api "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,7 +43,7 @@ func (m *MockRRSetRepository) EXPECT() *MockRRSetRepositoryMockRecorder {
 }
 
 // CreateRRSet mocks base method.
-func (m *MockRRSetRepository) CreateRRSet(ctx context.Context, rrSet dns.RecordSet) error {
+func (m *MockRRSetRepository) CreateRRSet(ctx context.Context, rrSet v1api.RecordSet) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateRRSet", ctx, rrSet)
 	ret0, _ := ret[0].(error)
@@ -71,10 +71,10 @@ func (mr *MockRRSetRepositoryMockRecorder) DeleteRRSet(ctx, rrSetId any) *gomock
 }
 
 // FetchRRSetForZone mocks base method.
-func (m *MockRRSetRepository) FetchRRSetForZone(ctx context.Context, rrSetName, rrSetType string) (*dns.RecordSet, error) {
+func (m *MockRRSetRepository) FetchRRSetForZone(ctx context.Context, rrSetName, rrSetType string) (*v1api.RecordSet, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FetchRRSetForZone", ctx, rrSetName, rrSetType)
-	ret0, _ := ret[0].(*dns.RecordSet)
+	ret0, _ := ret[0].(*v1api.RecordSet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -86,7 +86,7 @@ func (mr *MockRRSetRepositoryMockRecorder) FetchRRSetForZone(ctx, rrSetName, rrS
 }
 
 // UpdateRRSet mocks base method.
-func (m *MockRRSetRepository) UpdateRRSet(ctx context.Context, rrSet dns.RecordSet) error {
+func (m *MockRRSetRepository) UpdateRRSet(ctx context.Context, rrSet v1api.RecordSet) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateRRSet", ctx, rrSet)
 	ret0, _ := ret[0].(error)

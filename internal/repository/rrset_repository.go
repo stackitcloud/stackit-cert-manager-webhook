@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 )
 
 var (
@@ -62,7 +62,7 @@ func (r *rrSetRepository) FetchRRSetForZone(
 	rrSetType string,
 ) (*stackitdnsclient.RecordSet, error) {
 	var pager int32 = 1
-	listRequest := r.apiClient.ListRecordSets(ctx, r.projectId, r.zoneId).
+	listRequest := r.apiClient.DefaultAPI.ListRecordSets(ctx, r.projectId, r.zoneId).
 		Page(pager).PageSize(10000).
 		ActiveEq(true).NameEq(rrSetName).TypeEq(rrSetType)
 
@@ -71,11 +71,11 @@ func (r *rrSetRepository) FetchRRSetForZone(
 		return nil, err
 	}
 
-	if len(*rrSetResponse.RrSets) == 0 {
+	if len(rrSetResponse.RrSets) == 0 {
 		return nil, ErrRRSetNotFound
 	}
 
-	return &(*rrSetResponse.RrSets)[0], nil
+	return &rrSetResponse.RrSets[0], nil
 }
 
 func (r *rrSetRepository) CreateRRSet(
@@ -84,21 +84,22 @@ func (r *rrSetRepository) CreateRRSet(
 ) error {
 	var records []stackitdnsclient.RecordPayload
 	if rrSet.Records != nil {
-		records = make([]stackitdnsclient.RecordPayload, len(*rrSet.Records))
-		for i, record := range *rrSet.Records {
+		records = make([]stackitdnsclient.RecordPayload, len(rrSet.Records))
+		for i, record := range rrSet.Records {
 			records[i] = stackitdnsclient.RecordPayload{
 				Content: record.Content,
 			}
 		}
 	}
+	ttl := int32(rrSet.Ttl)
 	payload := stackitdnsclient.CreateRecordSetPayload{
 		Comment: rrSet.Comment,
 		Name:    rrSet.Name,
-		Ttl:     rrSet.Ttl,
-		Type:    stackitdnsclient.CreateRecordSetPayloadGetTypeAttributeType(rrSet.Type),
-		Records: &records,
+		Ttl:     &ttl,
+		Type:    rrSet.Type,
+		Records: records,
 	}
-	_, err := r.apiClient.CreateRecordSet(ctx, r.projectId, r.zoneId).CreateRecordSetPayload(payload).Execute()
+	_, err := r.apiClient.DefaultAPI.CreateRecordSet(ctx, r.projectId, r.zoneId).CreateRecordSetPayload(payload).Execute()
 	if err != nil {
 		return err
 	}
@@ -110,20 +111,21 @@ func (r *rrSetRepository) UpdateRRSet(
 	ctx context.Context,
 	rrSet stackitdnsclient.RecordSet,
 ) error {
-	records := make([]stackitdnsclient.RecordPayload, len(*rrSet.Records))
-	for i, record := range *rrSet.Records {
+	records := make([]stackitdnsclient.RecordPayload, len(rrSet.Records))
+	for i, record := range rrSet.Records {
 		records[i] = stackitdnsclient.RecordPayload{
 			Content: record.Content,
 		}
 	}
+	ttl := int32(rrSet.Ttl)
 	payload := stackitdnsclient.PartialUpdateRecordSetPayload{
 		Comment: rrSet.Comment,
-		Name:    rrSet.Name,
-		Records: &records,
-		Ttl:     rrSet.Ttl,
+		Name:    &rrSet.Name,
+		Records: records,
+		Ttl:     &ttl,
 	}
 
-	_, err := r.apiClient.PartialUpdateRecordSet(ctx, r.projectId, r.zoneId, *rrSet.Id).
+	_, err := r.apiClient.DefaultAPI.PartialUpdateRecordSet(ctx, r.projectId, r.zoneId, rrSet.Id).
 		PartialUpdateRecordSetPayload(payload).Execute()
 	if err != nil {
 		return err
@@ -133,7 +135,7 @@ func (r *rrSetRepository) UpdateRRSet(
 }
 
 func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error {
-	_, err := r.apiClient.DeleteRecordSet(ctx, r.projectId, r.zoneId, rrSetId).Execute()
+	_, err := r.apiClient.DefaultAPI.DeleteRecordSet(ctx, r.projectId, r.zoneId, rrSetId).Execute()
 	if err != nil {
 		if oapiError, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
 			if oapiError.StatusCode == 404 || oapiError.StatusCode == 400 {

@@ -12,7 +12,7 @@ import (
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
-	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -169,7 +169,7 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 
 	s.logger.Info("Zone fetched", zap.String("zoneDnsName", zoneDnsName))
 
-	rrSetRepository, err := s.rrSetRepositoryFactory.NewRRSetRepository(config, *zone.Id)
+	rrSetRepository, err := s.rrSetRepositoryFactory.NewRRSetRepository(config, zone.Id)
 	if err != nil {
 		s.logger.Error("Error creating RRSet repository", zap.Error(err))
 
@@ -188,14 +188,14 @@ func (s *stackitDnsProviderResolver) createRRSet(
 ) error {
 	rrSet := stackitdnsclient.RecordSet{
 		Comment: new("This record set is managed by stackit-cert-manager-webhook"),
-		Name:    &initResolverRes.rrSetName,
-		Records: &[]stackitdnsclient.Record{
+		Name:    initResolverRes.rrSetName,
+		Records: []stackitdnsclient.Record{
 			{
-				Content: &key,
+				Content: key,
 			},
 		},
-		Ttl:  &initResolverRes.acmeTxtDefaultTTL,
-		Type: stackitdnsclient.RecordSetGetTypeAttributeType(new(typeTxtRecord)),
+		Ttl:  initResolverRes.acmeTxtDefaultTTL,
+		Type: typeTxtRecord,
 	}
 
 	s.logger.Info("Creating RRSet", zap.String("rrSet", fmt.Sprintf("%+v", rrSet)))
@@ -298,23 +298,23 @@ func (s *stackitDnsProviderResolver) handleRRSetCleanup(
 		return s.handleFetchRRSetError(err, initResolverRes.rrSetName)
 	}
 
-	if rrSet == nil || rrSet.Records == nil || len(*rrSet.Records) == 0 {
+	if rrSet == nil || len(rrSet.Records) == 0 {
 		return s.deleteRRSet(initResolverRes.rrSetRepository, rrSet, initResolverRes.rrSetName)
 	}
 
-	originalLen := len(*rrSet.Records)
+	originalLen := len(rrSet.Records)
 
-	*rrSet.Records = slices.DeleteFunc(*rrSet.Records, func(r stackitdnsclient.Record) bool {
-		return r.Content != nil && *r.Content == challengeKey
+	rrSet.Records = slices.DeleteFunc(rrSet.Records, func(r stackitdnsclient.Record) bool {
+		return r.Content == challengeKey
 	})
 
-	if len(*rrSet.Records) == originalLen {
+	if len(rrSet.Records) == originalLen {
 		s.logger.Info("Challenge key not found in RRSet records, nothing to clean up", zap.String("rrSetName", initResolverRes.rrSetName))
 
 		return nil
 	}
 
-	if len(*rrSet.Records) == 0 {
+	if len(rrSet.Records) == 0 {
 		return s.deleteRRSet(initResolverRes.rrSetRepository, rrSet, initResolverRes.rrSetName)
 	}
 
@@ -341,15 +341,15 @@ func (s *stackitDnsProviderResolver) deleteRRSet(
 	if rrSet == nil {
 		return nil
 	}
-	err := rrSetRepository.DeleteRRSet(s.ctx, *rrSet.Id)
+	err := rrSetRepository.DeleteRRSet(s.ctx, rrSet.Id)
 	if err != nil {
-		return s.handleDeleteRRSetError(err, rrSetName, *rrSet.Id)
+		return s.handleDeleteRRSetError(err, rrSetName, rrSet.Id)
 	}
 
 	s.logger.Info(
 		"RRSet deleted",
 		zap.String("rrSetName", rrSetName),
-		zap.String("rrSetId", *rrSet.Id),
+		zap.String("rrSetId", rrSet.Id),
 	)
 
 	return nil
@@ -403,9 +403,9 @@ func (s *stackitDnsProviderResolver) handleRRSetNotFound(
 	return nil
 }
 
-func keyExists(records *[]stackitdnsclient.Record, challengeKey string) bool {
-	for _, record := range *records {
-		if record.Content != nil && *record.Content == challengeKey {
+func keyExists(records []stackitdnsclient.Record, challengeKey string) bool {
+	for _, record := range records {
+		if record.Content == challengeKey {
 			return true
 		}
 	}
@@ -423,12 +423,12 @@ func (s *stackitDnsProviderResolver) updateExistingRRSet(
 	if !keyExists(rrSet.Records, challengeKey) {
 		s.logger.Info("Challenge key not found in existing RRSet, adding new record", zap.String("rrSetName", initResolverRes.rrSetName))
 		newRecord := stackitdnsclient.Record{
-			Content: &challengeKey,
+			Content: challengeKey,
 		}
-		*rrSet.Records = append(*rrSet.Records, newRecord)
+		rrSet.Records = append(rrSet.Records, newRecord)
 	}
 
-	rrSet.Ttl = &initResolverRes.acmeTxtDefaultTTL
+	rrSet.Ttl = initResolverRes.acmeTxtDefaultTTL
 
 	if err := initResolverRes.rrSetRepository.UpdateRRSet(s.ctx, *rrSet); err != nil {
 		s.logger.Error(
@@ -448,5 +448,5 @@ func (s *stackitDnsProviderResolver) updateExistingRRSet(
 type initResolverContextResult struct {
 	rrSetRepository   repository.RRSetRepository
 	rrSetName         string
-	acmeTxtDefaultTTL int64
+	acmeTxtDefaultTTL int32
 }

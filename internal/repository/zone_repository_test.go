@@ -56,7 +56,7 @@ func TestZoneRepository_FetchZone(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedID, *zone.Id)
+				assert.Equal(t, tc.expectedID, zone.Id)
 			}
 		})
 	}

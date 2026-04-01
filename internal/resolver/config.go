@@ -26,7 +26,7 @@ type StackitDnsProviderConfig struct {
 	AuthTokenSecretNamespace string `json:"authTokenSecretNamespace"`
 	ServiceAccountKeyPath    string `json:"serviceAccountKeyPath"`
 	ServiceAccountBaseUrl    string `json:"serviceAccountBaseUrl"`
-	AcmeTxtRecordTTL         int64  `json:"acmeTxtRecordTTL"`
+	AcmeTxtRecordTTL         int32  `json:"acmeTxtRecordTTL"`
 }
 
 func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProviderConfig, error) {

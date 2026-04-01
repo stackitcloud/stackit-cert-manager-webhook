@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	repository "github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
-	dns "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	v1api "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,10 +43,10 @@ func (m *MockZoneRepository) EXPECT() *MockZoneRepositoryMockRecorder {
 }
 
 // FetchZone mocks base method.
-func (m *MockZoneRepository) FetchZone(ctx context.Context, zoneDnsName string) (*dns.Zone, error) {
+func (m *MockZoneRepository) FetchZone(ctx context.Context, zoneDnsName string) (*v1api.Zone, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FetchZone", ctx, zoneDnsName)
-	ret0, _ := ret[0].(*dns.Zone)
+	ret0, _ := ret[0].(*v1api.Zone)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

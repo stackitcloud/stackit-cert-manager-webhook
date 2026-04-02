@@ -91,7 +91,7 @@ func (r *rrSetRepository) CreateRRSet(
 			}
 		}
 	}
-	ttl := int32(rrSet.Ttl)
+	ttl := rrSet.Ttl
 	payload := stackitdnsclient.CreateRecordSetPayload{
 		Comment: rrSet.Comment,
 		Name:    rrSet.Name,
@@ -117,7 +117,7 @@ func (r *rrSetRepository) UpdateRRSet(
 			Content: record.Content,
 		}
 	}
-	ttl := int32(rrSet.Ttl)
+	ttl := rrSet.Ttl
 	payload := stackitdnsclient.PartialUpdateRecordSetPayload{
 		Comment: rrSet.Comment,
 		Name:    &rrSet.Name,

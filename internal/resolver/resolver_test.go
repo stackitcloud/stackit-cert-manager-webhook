@@ -691,10 +691,6 @@ func (s *cleanSuite) TestCleanUp_KeyNotFound_DoesNothing() {
 	s.NoError(err)
 }
 
-func toPtr(str string) *string {
-	return &str
-}
-
 func matchedBy[T any](fn func(T) bool) gomock.Matcher {
 	return matcher[T]{fn}
 }

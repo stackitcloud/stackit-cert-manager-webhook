@@ -39,11 +39,11 @@ jobs:
       - name: Runs all tests
         run: make test
 
-      - name: Run chart-testing (lint)
+      - name: Set up chart-testing
         uses: helm/chart-testing-action@main
-        with:
-          command: lint
-          config: .github/ct.yaml
+
+      - name: Run chart-testing (lint)
+        run: ct lint --config .github/ct.yaml
 
       - name: Runs helm docs
         run: make helm-docs

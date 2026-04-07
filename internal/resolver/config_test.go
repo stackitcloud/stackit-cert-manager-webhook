@@ -77,7 +77,7 @@ func TestLoadConfig(t *testing.T) {
 		require.Equal(t, "https://dns.api.stackit.cloud", cfg.ApiBasePath)
 		require.Equal(t, "stackit-cert-manager-webhook", cfg.AuthTokenSecretRef)
 		require.Equal(t, "auth-token", cfg.AuthTokenSecretKey)
-		require.Equal(t, int64(600), cfg.AcmeTxtRecordTTL)
+		require.Equal(t, int32(600), cfg.AcmeTxtRecordTTL)
 	})
 
 	t.Run("custom service account base url", func(t *testing.T) {

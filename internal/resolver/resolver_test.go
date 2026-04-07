@@ -11,7 +11,7 @@ import (
 	repository_mock "github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository/mock"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver"
 	resolver_mock "github.com/stackitcloud/stackit-cert-manager-webhook/internal/resolver/mock"
-	stackitdnsclient_new "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	stackitdnsclient_new "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -166,7 +166,7 @@ func (s *presentSuite) TestFailFetchRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -195,7 +195,7 @@ func (s *presentSuite) TestSuccessCreateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -222,18 +222,18 @@ func (s *presentSuite) TestSuccessUpdateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient_new.RecordSet{
-			Records: &[]stackitdnsclient_new.Record{},
+			Records: []stackitdnsclient_new.Record{},
 		}, nil)
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			return rrSet.Records != nil && len(*rrSet.Records) == 1
+			return len(rrSet.Records) == 1
 		})).
 		Return(nil)
 
@@ -253,7 +253,7 @@ func (s *presentSuite) TestSuccessPresentIdempotent() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -267,14 +267,14 @@ func (s *presentSuite) TestSuccessPresentIdempotent() {
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient_new.RecordSet{
-			Records: &[]stackitdnsclient_new.Record{
-				{Content: &challengeKey},
+			Records: []stackitdnsclient_new.Record{
+				{Content: challengeKey},
 			},
 		}, nil)
 
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			return len(*rrSet.Records) == 1 && *(*rrSet.Records)[0].Content == challengeKey
+			return len(rrSet.Records) == 1 && rrSet.Records[0].Content == challengeKey
 		})).
 		Return(nil)
 
@@ -295,7 +295,7 @@ func (s *presentSuite) TestSuccessPresentAppended() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -310,23 +310,23 @@ func (s *presentSuite) TestSuccessPresentAppended() {
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient_new.RecordSet{
-			Records: &[]stackitdnsclient_new.Record{
-				{Content: &existingKey},
+			Records: []stackitdnsclient_new.Record{
+				{Content: existingKey},
 			},
 		}, nil)
 
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			if rrSet.Records == nil || len(*rrSet.Records) != 2 {
+			if len(rrSet.Records) != 2 {
 				return false
 			}
 			foundExisting := false
 			foundNew := false
-			for _, r := range *rrSet.Records {
-				if r.Content != nil && *r.Content == existingKey {
+			for _, r := range rrSet.Records {
+				if r.Content == existingKey {
 					foundExisting = true
 				}
-				if r.Content != nil && *r.Content == newKey {
+				if r.Content == newKey {
 					foundNew = true
 				}
 			}
@@ -351,7 +351,7 @@ func (s *presentSuite) TestPresentRRSetWithEmptyRecords() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -359,11 +359,11 @@ func (s *presentSuite) TestPresentRRSetWithEmptyRecords() {
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient_new.RecordSet{
-			Records: &[]stackitdnsclient_new.Record{},
+			Records: []stackitdnsclient_new.Record{},
 		}, nil)
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			return len(*rrSet.Records) == 1
+			return len(rrSet.Records) == 1
 		})).Return(nil)
 	err := s.resolver.Present(challengeRequest)
 	s.NoError(err)
@@ -381,7 +381,7 @@ func (s *presentSuite) TestFailCreateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -409,14 +409,14 @@ func (s *presentSuite) TestFailUpdateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient_new.RecordSet{
-			Records: &[]stackitdnsclient_new.Record{},
+			Records: []stackitdnsclient_new.Record{},
 		}, nil)
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), gomock.Any()).
@@ -428,7 +428,7 @@ func (s *presentSuite) TestFailUpdateRRSet() {
 }
 
 func (s *presentSuite) TestTTLPropagation() {
-	ttl := int64(600)
+	ttl := int32(600)
 	// Test Create
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
@@ -441,7 +441,7 @@ func (s *presentSuite) TestTTLPropagation() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -451,7 +451,7 @@ func (s *presentSuite) TestTTLPropagation() {
 		Return(nil, repository.ErrRRSetNotFound)
 	s.mockRRSetRepository.EXPECT().
 		CreateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			return *rrSet.Ttl == ttl
+			return rrSet.Ttl == ttl
 		})).
 		Return(nil)
 
@@ -467,7 +467,7 @@ func (s *presentSuite) TestTTLPropagation() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -475,11 +475,11 @@ func (s *presentSuite) TestTTLPropagation() {
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient_new.RecordSet{
-			Records: &[]stackitdnsclient_new.Record{},
+			Records: []stackitdnsclient_new.Record{},
 		}, nil)
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			return *rrSet.Ttl == ttl
+			return rrSet.Ttl == ttl
 		})).
 		Return(nil)
 
@@ -502,7 +502,7 @@ func (s *presentSuite) TestAuthMethodSelection() {
 			Return(s.mockZoneRepository, nil)
 		s.mockZoneRepository.EXPECT().
 			FetchZone(gomock.Any(), gomock.Any()).
-			Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+			Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 		s.mockRRSetRepositoryFactory.EXPECT().
 			NewRRSetRepository(gomock.Any(), gomock.Any()).
 			Return(s.mockRRSetRepository, nil)
@@ -534,7 +534,7 @@ func (s *presentSuite) TestAuthMethodSelection() {
 			Return(s.mockZoneRepository, nil)
 		s.mockZoneRepository.EXPECT().
 			FetchZone(gomock.Any(), gomock.Any()).
-			Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+			Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 		s.mockRRSetRepositoryFactory.EXPECT().
 			NewRRSetRepository(gomock.Any(), gomock.Any()).
 			Return(s.mockRRSetRepository, nil)
@@ -575,7 +575,7 @@ func (s *cleanSuite) setupCommonMocks() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: toPtr("test")}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -615,9 +615,9 @@ func (s *cleanSuite) TestCleanUp_RemovesOnlyKey_DeletesRRSet() {
 	}
 
 	rrset := stackitdnsclient_new.RecordSet{
-		Id: toPtr("1234"),
-		Records: &[]stackitdnsclient_new.Record{
-			{Content: toPtr(targetKey)},
+		Id: "1234",
+		Records: []stackitdnsclient_new.Record{
+			{Content: targetKey},
 		},
 	}
 
@@ -627,7 +627,7 @@ func (s *cleanSuite) TestCleanUp_RemovesOnlyKey_DeletesRRSet() {
 
 	// Because it was the only key, the slice becomes empty, so we expect a DeleteRRSet
 	s.mockRRSetRepository.EXPECT().
-		DeleteRRSet(gomock.Any(), *rrset.Id).
+		DeleteRRSet(gomock.Any(), rrset.Id).
 		Return(nil)
 
 	err := s.resolver.CleanUp(req)
@@ -643,10 +643,10 @@ func (s *cleanSuite) TestCleanUp_RemovesOneKey_UpdatesRRSet() {
 	}
 
 	rrset := stackitdnsclient_new.RecordSet{
-		Id: toPtr("1234"),
-		Records: &[]stackitdnsclient_new.Record{
-			{Content: toPtr(targetKey)},
-			{Content: toPtr(keepKey)},
+		Id: "1234",
+		Records: []stackitdnsclient_new.Record{
+			{Content: targetKey},
+			{Content: keepKey},
 		},
 	}
 
@@ -657,9 +657,8 @@ func (s *cleanSuite) TestCleanUp_RemovesOneKey_UpdatesRRSet() {
 	// Because one key remains, we expect an UpdateRRSet, NOT a DeleteRRSet
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), matchedBy(func(updated stackitdnsclient_new.RecordSet) bool {
-			return updated.Records != nil &&
-				len(*updated.Records) == 1 &&
-				*(*updated.Records)[0].Content == keepKey
+			return len(updated.Records) == 1 &&
+				updated.Records[0].Content == keepKey
 		})).
 		Return(nil)
 
@@ -676,9 +675,9 @@ func (s *cleanSuite) TestCleanUp_KeyNotFound_DoesNothing() {
 	}
 
 	rrset := stackitdnsclient_new.RecordSet{
-		Id: toPtr("1234"),
-		Records: &[]stackitdnsclient_new.Record{
-			{Content: toPtr(keepKey)},
+		Id: "1234",
+		Records: []stackitdnsclient_new.Record{
+			{Content: keepKey},
 		},
 	}
 
@@ -690,10 +689,6 @@ func (s *cleanSuite) TestCleanUp_KeyNotFound_DoesNothing() {
 
 	err := s.resolver.CleanUp(req)
 	s.NoError(err)
-}
-
-func toPtr(str string) *string {
-	return &str
 }
 
 func matchedBy[T any](fn func(T) bool) gomock.Matcher {

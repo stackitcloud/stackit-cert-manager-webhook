@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/ptr"
 )
@@ -116,13 +116,13 @@ func getZonesResponseSuccess(t *testing.T, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
 	zones := stackitdnsclient.ListZonesResponse{
-		ItemsPerPage: ptr.To(int64(10)),
+		ItemsPerPage: int32(10),
 		Message:      ptr.To("success"),
-		TotalItems:   ptr.To(int64(1)),
-		TotalPages:   ptr.To(int64(1)),
-		Zones: ptr.To([]stackitdnsclient.Zone{
-			{Id: ptr.To("1234"), DnsName: ptr.To("test.com")},
-		}),
+		TotalItems:   int32(1),
+		TotalPages:   int32(1),
+		Zones: []stackitdnsclient.Zone{
+			{Id: "1234", DnsName: "test.com"},
+		},
 	}
 
 	successResponseBytes, err := json.Marshal(zones)
@@ -138,11 +138,11 @@ func getZonesResponseNoZones(t *testing.T, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
 	zones := stackitdnsclient.ListZonesResponse{
-		ItemsPerPage: ptr.To(int64(10)),
+		ItemsPerPage: int32(10),
 		Message:      ptr.To("success"),
-		TotalItems:   ptr.To(int64(1)),
-		TotalPages:   ptr.To(int64(1)),
-		Zones:        ptr.To([]stackitdnsclient.Zone{}),
+		TotalItems:   int32(1),
+		TotalPages:   int32(1),
+		Zones:        []stackitdnsclient.Zone{},
 	}
 
 	successResponseBytes, err := json.Marshal(zones)
@@ -165,21 +165,21 @@ func getRRSetResponseSuccess(t *testing.T, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
 	rrSets := stackitdnsclient.ListRecordSetsResponse{
-		ItemsPerPage: ptr.To(int64(20)),
+		ItemsPerPage: int32(20),
 		Message:      ptr.To("success"),
-		RrSets: ptr.To([]stackitdnsclient.RecordSet{
+		RrSets: []stackitdnsclient.RecordSet{
 			{
-				Name: ptr.To("test.com."),
-				Type: stackitdnsclient.RecordSetGetTypeAttributeType(ptr.To("TXT")),
-				Ttl:  ptr.To(int64(300)),
-				Records: ptr.To([]stackitdnsclient.Record{
-					{Content: ptr.To("_acme-challenge.test.com")},
-				}),
-				Id: ptr.To("1234"),
+				Name: "test.com.",
+				Type: "TXT",
+				Ttl:  int32(300),
+				Records: []stackitdnsclient.Record{
+					{Content: "_acme-challenge.test.com"},
+				},
+				Id: "1234",
 			},
-		}),
-		TotalItems: ptr.To(int64(2)),
-		TotalPages: ptr.To(int64(1)),
+		},
+		TotalItems: int32(2),
+		TotalPages: int32(1),
 	}
 
 	successResponseBytes, err := json.Marshal(rrSets)
@@ -195,11 +195,11 @@ func getRRSetResponseNoRRSets(t *testing.T, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
 	rrSets := stackitdnsclient.ListRecordSetsResponse{
-		ItemsPerPage: ptr.To(int64(20)),
+		ItemsPerPage: int32(20),
 		Message:      ptr.To("success"),
-		RrSets:       ptr.To([]stackitdnsclient.RecordSet{}),
-		TotalItems:   ptr.To(int64(2)),
-		TotalPages:   ptr.To(int64(1)),
+		RrSets:       []stackitdnsclient.RecordSet{},
+		TotalItems:   int32(2),
+		TotalPages:   int32(1),
 	}
 
 	successResponseBytes, err := json.Marshal(rrSets)
@@ -216,12 +216,12 @@ func postRRSetResponseSuccess(t *testing.T, w http.ResponseWriter) {
 
 	rrSets := stackitdnsclient.RecordSetResponse{
 		Message: ptr.To("success"),
-		Rrset: ptr.To(stackitdnsclient.RecordSet{
+		Rrset: stackitdnsclient.RecordSet{
 			Active:  ptr.To(true),
 			Comment: ptr.To("created by webhook"),
-			Id:      ptr.To("1234"),
-			Name:    ptr.To("test.com."),
-		}),
+			Id:      "1234",
+			Name:    "test.com.",
+		},
 	}
 
 	successResponseBytes, err := json.Marshal(rrSets)

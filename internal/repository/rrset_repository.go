@@ -64,7 +64,7 @@ func (r *rrSetRepository) FetchRRSetForZone(
 	var pager int32 = 1
 	listRequest := r.apiClient.DefaultAPI.ListRecordSets(ctx, r.projectId, r.zoneId).
 		Page(pager).PageSize(10000).
-		ActiveEq(true).NameEq(rrSetName).TypeEq(rrSetType)
+		ActiveEq(true).NameEq(rrSetName).TypeEq(stackitdnsclient.ListRecordSetsTypeEqParameter(rrSetType))
 
 	rrSetResponse, err := listRequest.Execute()
 	if err != nil {
@@ -96,7 +96,7 @@ func (r *rrSetRepository) CreateRRSet(
 		Comment: rrSet.Comment,
 		Name:    rrSet.Name,
 		Ttl:     &ttl,
-		Type:    rrSet.Type,
+		Type:    stackitdnsclient.CreateRecordSetPayloadType(string(rrSet.Type)),
 		Records: records,
 	}
 	_, err := r.apiClient.DefaultAPI.CreateRecordSet(ctx, r.projectId, r.zoneId).CreateRecordSetPayload(payload).Execute()

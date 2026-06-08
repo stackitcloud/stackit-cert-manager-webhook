@@ -1,6 +1,6 @@
 module github.com/stackitcloud/stackit-cert-manager-webhook
 
-go 1.26.0
+go 1.26.4
 
 // Do not remove this comment:
 // please place any replace statements here at the top for visibility and add a

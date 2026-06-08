@@ -1,6 +1,6 @@
 module github.com/stackitcloud/stackit-cert-manager-webhook
 
-go 1.26.0
+go 1.26.4
 
 // Do not remove this comment:
 // please place any replace statements here at the top for visibility and add a
@@ -11,7 +11,7 @@ replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-dif
 require (
 	github.com/cert-manager/cert-manager v1.20.2
 	github.com/stackitcloud/stackit-sdk-go/core v0.26.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.2
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.21.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0

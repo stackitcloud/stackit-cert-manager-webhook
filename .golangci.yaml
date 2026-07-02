@@ -1,7 +1,7 @@
 version: "2"
 run:
   concurrency: 4
-  go: "1.22"
+  go: "1.26"
   issues-exit-code: 1
   tests: true
   allow-parallel-runners: false
@@ -34,7 +34,7 @@ linters:
     - godox
     - goheader
     - gomoddirectives
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
     - importas
@@ -139,9 +139,6 @@ linters:
       replace-local: false
       exclude-forbidden: false
       retract-allow-no-explanation: false
-    gomodguard:
-      blocked:
-        local-replace-directives: false
     gosec:
       includes:
         - G401

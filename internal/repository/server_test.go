@@ -169,7 +169,7 @@ func getRRSetResponseSuccess(t *testing.T, w http.ResponseWriter) {
 		Message:      ptr.To("success"),
 		RrSets: []stackitdnsclient.RecordSet{
 			{
-				Name: "test.com.",
+				Name: testURL,
 				Type: "TXT",
 				Ttl:  int32(300),
 				Records: []stackitdnsclient.Record{
@@ -220,7 +220,7 @@ func postRRSetResponseSuccess(t *testing.T, w http.ResponseWriter) {
 			Active:  ptr.To(true),
 			Comment: ptr.To("created by webhook"),
 			Id:      "1234",
-			Name:    "test.com.",
+			Name:    testURL,
 		},
 	}
 

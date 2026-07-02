@@ -9,7 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const rrSetTypeTxt = "TXT"
+const (
+	rrSetTypeTxt = "TXT"
+	testURL      = "test.com."
+)
 
 func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 	t.Parallel()
@@ -20,7 +23,7 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "1234")
 		require.NoError(t, err)
-		rrSet, err := rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
+		rrSet, err := rrSetRepository.FetchRRSetForZone(ctx, testURL, rrSetTypeTxt)
 		require.NoError(t, err)
 		require.Equal(t, rrSet.Id, "1234")
 	})
@@ -29,7 +32,7 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "5678")
 		require.NoError(t, err)
-		_, err = rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
+		_, err = rrSetRepository.FetchRRSetForZone(ctx, testURL, rrSetTypeTxt)
 		require.Error(t, err)
 	})
 
@@ -37,7 +40,7 @@ func TestRrSetRepository_FetchRRSetForZone(t *testing.T) {
 		t.Parallel()
 		rrSetRepository, err := rrSetRepositoryFactory.NewRRSetRepository(config, "9999")
 		require.NoError(t, err)
-		_, err = rrSetRepository.FetchRRSetForZone(ctx, "test.com.", rrSetTypeTxt)
+		_, err = rrSetRepository.FetchRRSetForZone(ctx, testURL, rrSetTypeTxt)
 		require.Error(t, err)
 		require.ErrorIs(t, err, repository.ErrRRSetNotFound)
 	})
@@ -79,7 +82,7 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 			stackitdnsclient.RecordSet{
 				Comment: new("comment1"),
 				Id:      "0000",
-				Name:    "test.com.",
+				Name:    testURL,
 				Ttl:     int32(60),
 				Records: []stackitdnsclient.Record{{Content: "content1"}},
 			},
@@ -96,7 +99,7 @@ func TestRrSetRepository_UpdateRRSet(t *testing.T) {
 			stackitdnsclient.RecordSet{
 				Comment: new("comment2"),
 				Id:      "2222",
-				Name:    "test.com.",
+				Name:    testURL,
 				Ttl:     int32(60),
 				Records: []stackitdnsclient.Record{{Content: "content2"}},
 			},

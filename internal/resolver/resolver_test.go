@@ -28,6 +28,7 @@ var (
 )
 
 const (
+	testID    = "test"
 	targetKey = "delete-me"
 	keepKey   = "keep-me"
 )
@@ -166,7 +167,7 @@ func (s *presentSuite) TestFailFetchRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -195,7 +196,7 @@ func (s *presentSuite) TestSuccessCreateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -222,7 +223,7 @@ func (s *presentSuite) TestSuccessUpdateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -253,7 +254,7 @@ func (s *presentSuite) TestSuccessPresentIdempotent() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -295,7 +296,7 @@ func (s *presentSuite) TestSuccessPresentAppended() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -351,7 +352,7 @@ func (s *presentSuite) TestPresentRRSetWithEmptyRecords() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -381,7 +382,7 @@ func (s *presentSuite) TestFailCreateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -409,7 +410,7 @@ func (s *presentSuite) TestFailUpdateRRSet() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -441,7 +442,7 @@ func (s *presentSuite) TestTTLPropagation() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -467,7 +468,7 @@ func (s *presentSuite) TestTTLPropagation() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -502,7 +503,7 @@ func (s *presentSuite) TestAuthMethodSelection() {
 			Return(s.mockZoneRepository, nil)
 		s.mockZoneRepository.EXPECT().
 			FetchZone(gomock.Any(), gomock.Any()).
-			Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+			Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 		s.mockRRSetRepositoryFactory.EXPECT().
 			NewRRSetRepository(gomock.Any(), gomock.Any()).
 			Return(s.mockRRSetRepository, nil)
@@ -534,7 +535,7 @@ func (s *presentSuite) TestAuthMethodSelection() {
 			Return(s.mockZoneRepository, nil)
 		s.mockZoneRepository.EXPECT().
 			FetchZone(gomock.Any(), gomock.Any()).
-			Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+			Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 		s.mockRRSetRepositoryFactory.EXPECT().
 			NewRRSetRepository(gomock.Any(), gomock.Any()).
 			Return(s.mockRRSetRepository, nil)
@@ -575,7 +576,7 @@ func (s *cleanSuite) setupCommonMocks() {
 		Return(s.mockZoneRepository, nil)
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: "test"}, nil)
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -40,19 +42,34 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 		return cfg, err
 	}
 
+	setDefaultValues(&cfg)
+
+	webhookNamespace, err := determineNamespace(d.fileNamespaceName)
+	if err != nil {
+		return cfg, err
+	}
+
+	if cfg.AuthTokenSecretNamespace == "" {
+		cfg.AuthTokenSecretNamespace = webhookNamespace
+	}
+
+	if err := validateSecretNamespace(cfg.AuthTokenSecretNamespace, webhookNamespace); err != nil {
+		return cfg, err
+	}
+
 	if err := validateConfig(&cfg); err != nil {
 		return cfg, err
 	}
 
-	setDefaultValues(&cfg)
-
-	namespace, err := determineNamespace(cfg.AuthTokenSecretNamespace, d.fileNamespaceName)
-	if err != nil {
-		return cfg, err
-	}
-	cfg.AuthTokenSecretNamespace = namespace
-
 	return cfg, nil
+}
+
+func validateSecretNamespace(configuredNamespace, webhookNamespace string) error {
+	// Secrets must be in the same namespace as the webhook
+	if configuredNamespace != webhookNamespace {
+		return fmt.Errorf("authTokenSecretNamespace must be %s, got: %s", webhookNamespace, configuredNamespace)
+	}
+	return nil
 }
 
 func unmarshalConfig(cfgJSON *extapi.JSON, cfg *StackitDnsProviderConfig) error {
@@ -66,6 +83,38 @@ func unmarshalConfig(cfgJSON *extapi.JSON, cfg *StackitDnsProviderConfig) error 
 func validateConfig(cfg *StackitDnsProviderConfig) error {
 	if cfg.ProjectId == "" {
 		return fmt.Errorf("projectId must be specified")
+	}
+
+	if err := validateApiBasePath(cfg.ApiBasePath); err != nil {
+		return err
+	}
+
+	if cfg.ServiceAccountKeyPath != "" {
+		if err := validateSaKeyPath(cfg.ServiceAccountKeyPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateApiBasePath(apiBasePath string) error {
+	pattern := "^https://dns\\.api(?:\\.[a-z0-9-]+)?\\.stackit\\.cloud/?$"
+
+	if matched, err := regexp.MatchString(pattern, apiBasePath); err == nil && matched {
+		return nil
+	}
+
+	return fmt.Errorf("apiBasePath not allowed: %s", apiBasePath)
+}
+
+func validateSaKeyPath(keyPath string) error {
+	allowedPrefix := "/var/run/secrets/stackit/"
+
+	clean := filepath.Clean(keyPath)
+
+	if !strings.HasPrefix(clean, allowedPrefix) && clean != strings.TrimSuffix(allowedPrefix, "/") {
+		return fmt.Errorf("serviceAccountKeyPath must be within %s, got: %s", allowedPrefix, clean)
 	}
 
 	return nil
@@ -86,11 +135,7 @@ func setDefaultValues(cfg *StackitDnsProviderConfig) {
 	}
 }
 
-func determineNamespace(currentNamespace string, fileNamespaceName string) (string, error) {
-	if currentNamespace != "" {
-		return currentNamespace, nil
-	}
-
+func determineNamespace(fileNamespaceName string) (string, error) {
 	data, err := os.ReadFile(fileNamespaceName)
 	if err != nil {
 		return "", fmt.Errorf("failed to find the webhook pod namespace: %w", err)

@@ -39,6 +39,9 @@ fullnameOverride: ""
 stackitSaAuthentication:
   # -- enabled flag for the stackit service account keys.
   enabled: false
+  # -- controls whether the webhook secret is read only from the webhook namespace or may be read from the issuer namespace.
+  # -- secret access scope for auth token lookup. Use "webhook" for namespace-scoped access (recommended) or "issuer" to allow issuer-namespace secret lookup.
+  secretAccessScope: webhook
   # -- secret where the service account key is stored. Should be in the same namespace as the webhook since it will be mounted into the pod.
   secretName: stackit-sa-authentication
   # -- key of the service account key in the secret. Which will be later be used to load in keys in the pod as well.

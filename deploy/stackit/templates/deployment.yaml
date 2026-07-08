@@ -32,6 +32,8 @@ spec:
           env:
             - name: GROUP_NAME
               value: {{ .Values.groupName | quote }}
+            - name: STACKIT_SECRET_ACCESS_SCOPE
+              value: {{ .Values.stackitSaAuthentication.secretAccessScope | quote }}
             {{- if .Values.stackitSaAuthentication.enabled }}
             - name: STACKIT_SERVICE_ACCOUNT_KEY_PATH
               value: "{{ .Values.stackitSaAuthentication.mountPath}}/{{ .Values.stackitSaAuthentication.fileName}}"

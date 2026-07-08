@@ -18,7 +18,13 @@ type ConfigProvider interface {
 
 type defaultConfigProvider struct {
 	fileNamespaceName string
+	secretAccessScope string
 }
+
+const (
+	secretAccessScopeWebhook = "webhook"
+	secretAccessScopeIssuer   = "issuer"
+)
 
 type StackitDnsProviderConfig struct {
 	ProjectId                string `json:"projectId"`
@@ -49,11 +55,12 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 		return cfg, err
 	}
 
-	if cfg.AuthTokenSecretNamespace == "" {
+	scope := d.secretAccessScope
+	if scope == "" || scope == secretAccessScopeWebhook {
 		cfg.AuthTokenSecretNamespace = webhookNamespace
 	}
 
-	if err := validateSecretNamespace(cfg.AuthTokenSecretNamespace, webhookNamespace); err != nil {
+	if err := validateSecretNamespace(cfg.AuthTokenSecretNamespace, webhookNamespace, scope); err != nil {
 		return cfg, err
 	}
 
@@ -64,12 +71,21 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 	return cfg, nil
 }
 
-func validateSecretNamespace(configuredNamespace, webhookNamespace string) error {
-	// Secrets must be in the same namespace as the webhook
-	if configuredNamespace != webhookNamespace {
-		return fmt.Errorf("authTokenSecretNamespace must be %s, got: %s", webhookNamespace, configuredNamespace)
+func validateSecretNamespace(configuredNamespace, webhookNamespace, accessScope string) error {
+	switch accessScope {
+	case "", secretAccessScopeWebhook:
+		if configuredNamespace != webhookNamespace {
+			return fmt.Errorf("authTokenSecretNamespace must be %s, got: %s", webhookNamespace, configuredNamespace)
+		}
+		return nil
+	case secretAccessScopeIssuer:
+		if configuredNamespace == "" {
+			return fmt.Errorf("authTokenSecretNamespace must be specified when secretAccessScope=issuer")
+		}
+		return nil
+	default:
+		return fmt.Errorf("invalid secretAccessScope %q", accessScope)
 	}
-	return nil
 }
 
 func unmarshalConfig(cfgJSON *extapi.JSON, cfg *StackitDnsProviderConfig) error {
@@ -152,5 +168,6 @@ func determineNamespace(fileNamespaceName string) (string, error) {
 func NewConfigProvider() ConfigProvider {
 	return defaultConfigProvider{
 		fileNamespaceName: "/var/run/secrets/kubernetes.io/serviceaccount/namespace",
+		secretAccessScope: strings.ToLower(strings.TrimSpace(os.Getenv("STACKIT_SECRET_ACCESS_SCOPE"))),
 	}
 }

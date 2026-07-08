@@ -3,6 +3,8 @@ version: 2
 project_name: stackit-cert-manager-webhook
 snapshot:
   version_template: '{{ .Tag }}-SNAPSHOT'
+release:
+  prerelease: auto
 
 builds:
   - id: stackit-cert-manager-webhook

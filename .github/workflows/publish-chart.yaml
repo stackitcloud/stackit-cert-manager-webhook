@@ -39,3 +39,14 @@ jobs:
           charts_dir: deploy
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Ensure gh-pages skips Jekyll processing
+        run: |
+          git fetch origin gh-pages
+          git switch --create gh-pages origin/gh-pages
+          if [ ! -f .nojekyll ]; then
+            touch .nojekyll
+            git add .nojekyll
+            git commit -m "Add .nojekyll for Pages deployment stability"
+            git push origin gh-pages
+          fi

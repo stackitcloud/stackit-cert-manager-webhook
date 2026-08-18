@@ -62,7 +62,8 @@ html-coverage: out/report.json
 out/report.json:
 	go test -race ./... -coverprofile=out/cover.out --json | tee "$(@)"
 
-test-e2e:
+.PHONY: test-e2e-conformance
+test-e2e-conformance:
 	@STACKIT_TOKEN=$(STACKIT_TOKEN) TEST_ZONE_NAME=$(TEST_ZONE_NAME) go test -race -tags=e2e ./... -coverprofile out/cover.out
 
 run:

@@ -96,18 +96,18 @@ helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-
                 projectId: <STACKIT PROJECT ID>
     ```
    *Note on service accounts and namespaces:*
-   - Issuer-per-namespace (recommended for isolation): create a STACKIT service-account key (sa.json) for each STACKIT project you need to manage and place that key in a Kubernetes Secret in the same namespace as the Issuer. This means one sa.json (one SA key) per Issuer/namespace when the Issuers target different STACKIT projects.
-     Example (create a secret in the Issuer namespace):
-     ```bash
-     kubectl create secret generic stackit-sa-authentication \
-       -n <issuer-namespace> \
-       --from-literal=sa.json='{"id":"...","credentials":{...}}'
-     ```
-     Ensure the webhook can read the secret in that namespace (create the secret where the Issuer lives).
-   - Alternative (single SA key for multiple projects): you can grant the service account broader permissions at folder or organization level so one sa.json can manage zones across multiple projects. This is more convenient but grants wider access — evaluate security and follow least-privilege principles.
-   - Tradeoffs:
-     - Per-namespace/per-project SA keys: better isolation and least privilege, easier to rotate keys per project.
-     - Folder/org-level SA key: lower operational overhead (single key), but larger blast radius if compromised.
+    - Issuer-per-namespace (recommended for isolation): create a STACKIT service-account key (sa.json) for each STACKIT project you need to manage and place that key in a Kubernetes Secret in the same namespace as the Issuer. This means one sa.json (one SA key) per Issuer/namespace when the Issuers target different STACKIT projects.
+      Example (create a secret in the Issuer namespace):
+      ```bash
+      kubectl create secret generic stackit-sa-authentication \
+        -n <issuer-namespace> \
+        --from-literal=sa.json='{"id":"...","credentials":{...}}'
+      ```
+      Ensure the webhook can read the secret in that namespace (create the secret where the Issuer lives).
+    - Alternative (single SA key for multiple projects): you can grant the service account broader permissions at folder or organization level so one sa.json can manage zones across multiple projects. This is more convenient but grants wider access — evaluate security and follow least-privilege principles.
+    - Tradeoffs:
+        - Per-namespace/per-project SA keys: better isolation and least privilege, easier to rotate keys per project.
+        - Folder/org-level SA key: lower operational overhead (single key), but larger blast radius if compromised.
 
 3. ***Demonstration of Ingress Integration with Wildcard SSL/TLS Certificate Generation***   
    Given the preceding configuration, it is possible to exploit the capabilities of the Issuer or ClusterIssuer to
@@ -192,23 +192,37 @@ spec:
 
 ## Test Procedures
 
-- Unit Testing:
-    ```bash
-    make test
-    ```
+### Unit Testing:
+```bash
+make test
+```
 
-- Unit Testing with Coverage Analysis:
-    ```bash
-    make coverage
-    ```
+### Unit Testing with Coverage Analysis:
+```bash
+make coverage
+```
 
-- Linting:
-    ```bash
-    make lint
-    ```
+### Linting:
+```bash
+make lint
+```
 
-- End-to-End Testing Workflow:  
-  Follow the comprehensive guide available [here](e2e_test/README.md).
+### Go Conformance Testing:
+Runs the official cert-manager Go solver test suite in memory against the STACKIT API:
+```bash
+STACKIT_TOKEN="<token>" TEST_ZONE_NAME="example.com" make test-e2e-conformance
+```
+Follow the comprehensive guide available [here](e2e_test/README.md).
+
+### Kubernetes Integration (E2E) Testing:
+Spins up a local Kind cluster, installs cert-manager, builds and deploys the webhook, and executes Kuttl integration tests (testing single-record lifecycle and wildcard certificates against Let's Encrypt Staging):
+```bash
+make test-e2e-local \
+  PROJECT_ID="<your-project-id>" \
+  ZONE_NAME="<your-test-zone>" \
+  AUTH_KEY_PATH="<path-to-sa-key.json>"
+```
+Follow the comprehensive guide available [here](tests/e2e/README.md).
 
 ## Release Process Overview
 

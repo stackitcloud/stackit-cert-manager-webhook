@@ -45,5 +45,5 @@ Declare the testing DNS zone. Ensure project_id consistency:
 ### Environmental Prerequisite Configuration:
 With prerequisites addressed, proceed to run the entire E2E test suite:
 ```bash
-make test-e2e
+make test-e2e-conformance
 ```

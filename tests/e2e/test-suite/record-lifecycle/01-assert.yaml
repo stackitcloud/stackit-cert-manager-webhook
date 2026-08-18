@@ -1,0 +1,24 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+    - script: |
+          RECORD_NAME="_acme-challenge.e2e-cert.${ZONE_NAME}"
+          ZONE="${ZONE_NAME}"
+          
+          AUTH_NS=$(dig +short NS "$ZONE" | head -n 1)
+          if [ -z "$AUTH_NS" ]; then
+            echo "ERROR: Could not determine authoritative nameserver for $ZONE"
+            return 1
+          fi
+          
+          RESULT=$(dig "@$AUTH_NS" -t TXT +short "$RECORD_NAME")
+          echo "DEBUG: Dig Result for $RECORD_NAME: '$RESULT'"
+          
+          if [ -z "$RESULT" ]; then
+            echo "SUCCESS: TXT record $RECORD_NAME successfully deleted by the webhook!"
+            exit 0
+          fi
+          
+          echo "FAILED: $RECORD_NAME still exists."
+          exit 1

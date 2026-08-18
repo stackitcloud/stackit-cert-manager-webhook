@@ -1,4 +1,4 @@
-# Contributing to External DNS STACKIT Webhook
+# Contributing to Cert-Manager STACKIT Webhook
 
 Welcome and thank you for making it this far and considering contributing to stackit-cert-manager-webhook.
 We always appreciate any contributions by raising issues, improving the documentation, fixing bugs or adding new features.

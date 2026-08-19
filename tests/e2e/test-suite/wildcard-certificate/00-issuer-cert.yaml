@@ -1,0 +1,33 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: stackit-e2e-wildcard-issuer
+  namespace: default
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: e2e-wildcard-test@stackit.de
+    privateKeySecretRef:
+      name: stackit-e2e-wildcard-issuer-key
+    solvers:
+      - dns01:
+          webhook:
+            solverName: stackit
+            groupName: acme.stackit.de
+            config:
+              projectId: ${PROJECT_ID}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-wildcard-cert
+  namespace: default
+spec:
+  secretName: e2e-wildcard-cert-tls
+  issuerRef:
+    name: stackit-e2e-wildcard-issuer
+    kind: Issuer
+  commonName: "*.e2e-wildcard.${ZONE_NAME}"
+  dnsNames:
+    - "e2e-wildcard.${ZONE_NAME}"
+    - "*.e2e-wildcard.${ZONE_NAME}"

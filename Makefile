@@ -64,7 +64,7 @@ out/report.json:
 
 .PHONY: test-e2e-conformance
 test-e2e-conformance:
-	@STACKIT_TOKEN=$(STACKIT_TOKEN) TEST_ZONE_NAME=$(TEST_ZONE_NAME) go test -race -tags=e2e ./... -coverprofile out/cover.out
+	@TEST_ZONE_NAME=$(TEST_ZONE_NAME) go test -race -tags=e2e ./... -coverprofile out/cover.out
 
 run:
 	go run cmd/webhook/main.go

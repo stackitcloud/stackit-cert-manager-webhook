@@ -19,9 +19,9 @@ certManager:
   # -- service account name for the cert-manager.
   serviceAccountName: cert-manager
 
-# -- Service Account 
+# -- Service Account
 serviceAccount:
-  # -- service account annotations.
+  # -- service account annotations. Add workload-identity annotations here for WIF authentication.
   annotations: {}
  
 # -- Image information for the webhook.
@@ -40,16 +40,16 @@ nameOverride: ""
 # -- Fullname override of the webhook.
 fullnameOverride: ""
 
-# -- Configuration for the stackit service account keys.
+# -- Configuration for the stackit service account keys (Static Global Fallback).
 stackitSaAuthentication:
-  # -- enabled flag for the stackit service account keys.
+  # -- enabled flag for mounting the static STACKIT Service Account key JSON.
   enabled: false
   # -- controls whether the webhook secret is read only from the webhook namespace or may be read from the issuer namespace.
-  # -- secret access scope for auth token lookup. Use "webhook" for namespace-scoped access (recommended) or "issuer" to allow issuer-namespace secret lookup.
+  # -- secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended) or "issuer" to allow issuer-namespace secret lookup.
   secretAccessScope: webhook
-  # -- secret where the service account key is stored. Should be in the same namespace as the webhook since it will be mounted into the pod.
+  # -- secret where the static Service Account key JSON is stored. Should be in the same namespace as the webhook since it will be mounted into the pod.
   secretName: stackit-sa-authentication
-  # -- key of the service account key in the secret. Which will be later be used to load in keys in the pod as well.
+  # -- key of the Service Account JSON within the secret.
   fileName: sa.json
   # -- Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit/
   mountPath: /var/run/secrets/stackit
@@ -107,7 +107,7 @@ additionalVolumeMounts: []
 #     mountPath: /etc/extra-config
 #     readOnly: true
 
-# -- Placeholder for additional env-variables. Apply via "--set"-command  or 
+# -- Placeholder for additional env-variables. Apply via "--set"-command  or
 # -- delete the next line and add your variables as in the commented example below.
 extraEnv: []
 # extraEnv:

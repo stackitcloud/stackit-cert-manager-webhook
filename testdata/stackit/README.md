@@ -1,11 +1,10 @@
-# Cert-Manager ACME DNS01 Webhook Solver for STACKIT DNS Manager
+# Cert-Manager ACME DNS01 Webhook Solver for STACKIT DNS
 
 ## testdata Directory
 
-Copy the example Secret files, replacing $STACKIT_TOKEN with your STACKIT API
-token:
+Copy the example Secret file, replacing `$STACKIT_SA_KEY` with your STACKIT Service Account JSON key:
 
 ```bash
-$ export STACKIT_TOKEN=$(echo -n "<token>" | base64)
+$ export STACKIT_SA_KEY_B64=$(cat /path/to/sa.json | base64 -w 0)
 $ envsubst < testdata/stackit/secret.yaml.example | kubectl apply -f -
 ```

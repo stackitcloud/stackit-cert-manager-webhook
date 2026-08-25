@@ -1,49 +1,46 @@
-# End-to-End (E2E) Test Suite
+# End-to-End (E2E) Conformance Test Suite
 
-This repository segment encapsulates the comprehensive E2E testing procedures for this project module. It harnesses the `fixture.RunConformance` method to execute conformity verification sequences, ensuring adherence to `cert-manager` established protocols.
+This directory contains the cert-manager conformance testing procedures for this project module. It harnesses the `fixture.RunConformance` method to execute conformity verification sequences, ensuring adherence to `cert-manager` established protocols.
 
 ## Test Execution Workflow
 
-### Environmental Prerequisite Configuration:
-For appropriate test initialization within the STACKIT ecosystem, it is imperative to align the environment with 
-the predetermined specifications. STACKIT dictates a structural model where a parent project umbrellas various 
-resource entities, inclusive of DNS zones.
+### Environmental Prerequisite Configuration
 
-1. **Project Identification Parameterization**:   
-Configure the unique `project_id` in the [configuration manifest](../testdata/stackit/config.json). Typical configuration appears as:
-    ```json
-    {
-      "projectId": "c242332a-ae82-42e2-80e8-eed338fd2b2f",
-      "authTokenSecretNamespace": "default"
-    }
-    ```
+For appropriate test initialization within the STACKIT ecosystem, you must configure your local environment and the mock data properly.
 
-    This instantiation assumes the existence of the specified project, and the associated authentication 
-    token possesses requisite privileges for project and zone access.
-2. **Authentication Token Configuration**:    
-Establish an environment variable for the authentication token, duly vested with CRUD permissions for DNS zones:
-    ```bash
-    export STACKIT_TOKEN="<your-token>"
-    ```
-3. **Zone Initialization**:   
-Declare the testing DNS zone. Ensure project_id consistency:
-    ```bash
-    export TEST_ZONE_NAME="test-zone.runs.onstackit.cloud"
-    ```
-    Invoke the following HTTP request to either instantiate a fresh zone or validate the existing one:
-    ```bash
-    curl --location "https://dns.api.stackit.cloud/v1/projects/c242332a-ae82-42e2-80e8-eed338fd2b2f/zones" \
-    --header 'Content-Type: application/json' \
-    --header "Authorization: Bearer $AUTHENTICATION_TOKEN" \
-    --data '{
-        "name": "cert manager e2e test",
-        "dnsName": "$TEST_ZONE_NAME" 
-    }'
-    ```
-    Post successful invocation, validate zone ownership. For pre-existing zones, consider a unique zone parameter.
+1. **Project Identification Parameterization**:
+   Configure the unique `projectId` in the [configuration manifest](../testdata/stackit/config.json). Typical configuration appears as:
+   ```json
+   {
+     "projectId": "c242332a-ae82-42e2-80e8-eed338fd2b2f",
+     "serviceAccountSecretRef": "stackit-cert-manager-webhook",
+     "serviceAccountSecretKey": "sa.json",
+     "serviceAccountSecretNamespace": "default"
+   }
+   ```
+   This assumes the specified project exists, and the Service Account key possesses the requisite DNS Admin privileges.
 
-### Environmental Prerequisite Configuration:
-With prerequisites addressed, proceed to run the entire E2E test suite:
+2. **Authentication Key Configuration**:
+   The conformance test suite dynamically loads resources from `testdata/stackit/` into its mocked API server. You must create a valid Kubernetes Secret manifest containing your Service Account JSON.
+
+   Generate `secret.yaml` from the provided example:
+   ```bash
+   export STACKIT_SA_KEY_B64=$(cat /path/to/your/sa.json | base64 -w 0)
+   envsubst < ../testdata/stackit/secret.yaml.example > ../testdata/stackit/secret.yaml
+   ```
+
+3. **Zone Initialization**:
+   Ensure your testing DNS zone exists in your STACKIT project. You can create this via the STACKIT Portal or the STACKIT CLI.
+
+   Declare the testing DNS zone as an environment variable before running the suite:
+   ```bash
+   export TEST_ZONE_NAME="test-zone.runs.onstackit.cloud"
+   ```
+
+### Running the Suite
+
+With prerequisites addressed and the `secret.yaml` populated, proceed to run the conformance test suite:
+
 ```bash
 make test-e2e-conformance
 ```

@@ -8,6 +8,10 @@ metadata:
     chart: {{ include "stackit-cert-manager-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+  {{- with .Values.annotations }}
+  annotations:
+{{ toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -19,6 +23,10 @@ spec:
       labels:
         app: {{ include "stackit-cert-manager-webhook.name" . }}
         release: {{ .Release.Name }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       serviceAccountName: {{ include "stackit-cert-manager-webhook.fullname" . }}
       containers:

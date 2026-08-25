@@ -64,18 +64,21 @@ func (r *rrSetRepository) FetchRRSetForZone(
 	var pager int32 = 1
 	listRequest := r.apiClient.DefaultAPI.ListRecordSets(ctx, r.projectId, r.zoneId).
 		Page(pager).PageSize(10000).
-		ActiveEq(true).NameEq(rrSetName).TypeEq(stackitdnsclient.ListRecordSetsTypeEqParameter(rrSetType))
+		NameEq(rrSetName).TypeEq(stackitdnsclient.ListRecordSetsTypeEqParameter(rrSetType))
 
 	rrSetResponse, err := listRequest.Execute()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(rrSetResponse.RrSets) == 0 {
-		return nil, ErrRRSetNotFound
+	for i := range rrSetResponse.RrSets {
+		state := rrSetResponse.RrSets[i].State
+		if state != stackitdnsclient.RECORDSETSTATE_DELETE_SUCCEEDED && state != stackitdnsclient.RECORDSETSTATE_DELETING {
+			return &rrSetResponse.RrSets[i], nil
+		}
 	}
 
-	return &rrSetResponse.RrSets[0], nil
+	return nil, ErrRRSetNotFound
 }
 
 func (r *rrSetRepository) CreateRRSet(

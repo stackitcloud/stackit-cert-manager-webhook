@@ -138,7 +138,7 @@ If your cluster supports Workload Identity Federation (e.g., SKE clusters), you 
 The following table delineates the configuration options available under the `config` block of the STACKIT Cert Manager Webhook solver:
 
 | Key | Type | Default | Description |
-|-----|------|---------|-------------|
+|-----|------|--------|-------------|
 | `projectId` | string | `""` | **Required.** The unique identifier for the STACKIT project. |
 | `apiBasePath` | string | `"https://dns.api.stackit.cloud"` | The base path for the STACKIT DNS API. |
 | `serviceAccountSecretRef` | string | `""` | Name of the Kubernetes Secret containing the SA JSON. |
@@ -147,7 +147,7 @@ The following table delineates the configuration options available under the `co
 | `serviceAccountKeyPath` | string | `""` | The absolute file path to a statically mounted SA JSON key inside the webhook container. |
 | `useWorkloadIdentityFederation` | bool | `false` | Explicitly enables STACKIT Workload Identity Federation authentication. |
 | `serviceAccountBaseUrl` | string | `""` | Custom URL for trading SA keys for access tokens. |
-| `acmeTxtRecordTTL` | int32 | `600` | The TTL for the ACME TXT challenge record. |
+| `acmeTxtRecordTTL` | int32 | `60` | The TTL for the ACME TXT challenge record. |
 
 ## Test Procedures
 

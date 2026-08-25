@@ -84,19 +84,7 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 
 	setDefaultValues(&cfg)
 
-	webhookNamespace, err := determineNamespace(d.fileNamespaceName)
-	if err != nil {
-		return cfg, err
-	}
-
-	scope := d.secretAccessScope
-	if scope == "" || scope == secretAccessScopeWebhook {
-		if cfg.ServiceAccountSecretNamespace == "" {
-			cfg.ServiceAccountSecretNamespace = webhookNamespace
-		}
-	}
-
-	if err := validateSecretNamespace(cfg.ServiceAccountSecretNamespace, webhookNamespace, scope); err != nil {
+	if err := d.resolveNamespace(&cfg); err != nil {
 		return cfg, err
 	}
 
@@ -105,6 +93,26 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 	}
 
 	return cfg, nil
+}
+
+func (d defaultConfigProvider) resolveNamespace(cfg *StackitDnsProviderConfig) error {
+	webhookNamespace, err := determineNamespace(d.fileNamespaceName)
+	if err != nil {
+		return err
+	}
+
+	scope := d.secretAccessScope
+	if (scope == "" || scope == secretAccessScopeWebhook) && cfg.ServiceAccountSecretNamespace == "" {
+		cfg.ServiceAccountSecretNamespace = webhookNamespace
+	}
+
+	if cfg.ServiceAccountSecretRef != "" {
+		if err := validateSecretNamespace(cfg.ServiceAccountSecretNamespace, webhookNamespace, scope); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func validateSecretNamespace(configuredNamespace, webhookNamespace, accessScope string) error {
@@ -180,7 +188,7 @@ func setDefaultValues(cfg *StackitDnsProviderConfig) {
 	}
 
 	if cfg.AcmeTxtRecordTTL == 0 {
-		cfg.AcmeTxtRecordTTL = 600
+		cfg.AcmeTxtRecordTTL = 60
 	}
 }
 

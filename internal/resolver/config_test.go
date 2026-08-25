@@ -85,7 +85,7 @@ func TestLoadConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "test", cfg.ProjectId)
 		require.Equal(t, "https://dns.api.stackit.cloud", cfg.ApiBasePath)
-		require.Equal(t, int32(600), cfg.AcmeTxtRecordTTL)
+		require.Equal(t, int32(60), cfg.AcmeTxtRecordTTL)
 	})
 }
 

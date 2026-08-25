@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
+	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
+	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,12 +18,16 @@ func TestZoneRepository_FetchZone(t *testing.T) {
 	server := getTestServer(t)
 	t.Cleanup(server.Close)
 
+	apiClient, _ := stackitdnsclient.NewAPIClient(
+		stackitconfig.WithEndpoint(server.URL),
+		stackitconfig.WithHTTPClient(server.Client()),
+		stackitconfig.WithoutAuthentication(),
+	)
+
 	createZoneRepo := func(projectID string) repository.ZoneRepository {
 		config := repository.Config{
-			ApiBasePath: server.URL,
-			AuthToken:   "test-token",
-			ProjectId:   projectID,
-			HttpClient:  server.Client(),
+			ProjectId: projectID,
+			ApiClient: apiClient,
 		}
 		zoneRepository, err := repository.NewZoneRepositoryFactory().NewZoneRepository(config)
 		require.NoError(t, err)

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"slices"
 	"strings"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
+	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
@@ -19,8 +19,6 @@ import (
 )
 
 const typeTxtRecord = "TXT"
-
-var stackitAuthToken = os.Getenv("STACKIT_AUTH_TOKEN")
 
 func NewResolver(
 	httpClient *http.Client,
@@ -184,15 +182,14 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 }
 
 func (s *stackitDnsProviderResolver) createRRSet(
-	initResolverRes *initResolverContextResult, key string,
+	initResolverRes *initResolverContextResult,
+	key string,
 ) error {
 	rrSet := stackitdnsclient.RecordSet{
 		Comment: new("This record set is managed by stackit-cert-manager-webhook"),
 		Name:    initResolverRes.rrSetName,
 		Records: []stackitdnsclient.Record{
-			{
-				Content: key,
-			},
+			{Content: key},
 		},
 		Ttl:  initResolverRes.acmeTxtDefaultTTL,
 		Type: typeTxtRecord,
@@ -203,71 +200,57 @@ func (s *stackitDnsProviderResolver) createRRSet(
 	return initResolverRes.rrSetRepository.CreateRRSet(s.ctx, rrSet)
 }
 
-// getAuthToken from Kubernetes secretFetcher.
-func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig) (string, error) {
-	if stackitAuthToken != "" {
-		return stackitAuthToken, nil
-	}
-
-	token, err := s.secretFetcher.StringFromSecret(
-		cfg.AuthTokenSecretNamespace,
-		cfg.AuthTokenSecretRef,
-		cfg.AuthTokenSecretKey,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
-}
-
-// geSaKeyPath gets the Service Account Key Path from the environment.
-func (s *stackitDnsProviderResolver) getSaKeyPath(cfg *StackitDnsProviderConfig) string {
-	if cfg.ServiceAccountKeyPath != "" {
-		return cfg.ServiceAccountKeyPath
-	}
-
-	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
-}
-
-func (s *stackitDnsProviderResolver) checkUseSaAuthentication(cfg *StackitDnsProviderConfig) bool {
-	return s.getSaKeyPath(cfg) != ""
-}
-
 func (s *stackitDnsProviderResolver) getRepositoryConfig(
 	cfg *StackitDnsProviderConfig,
 ) (repository.Config, error) {
-	config := repository.Config{
-		ApiBasePath:           cfg.ApiBasePath,
-		ProjectId:             cfg.ProjectId,
-		HttpClient:            s.httpClient,
-		UseSaKey:              false,
-		ServiceAccountBaseUrl: cfg.ServiceAccountBaseUrl,
+	authType, err := determineAuthType(cfg)
+	if err != nil {
+		return repository.Config{}, err
 	}
 
-	switch {
-	case s.checkUseSaAuthentication(cfg):
-		config.SaKeyPath = s.getSaKeyPath(cfg)
-		config.UseSaKey = true
-		s.logger.Info(
-			"Using service account key for authentication",
-			zap.String("saKeyPath", config.SaKeyPath),
-			zap.String("serviceAccountBaseUrl", config.ServiceAccountBaseUrl),
+	options := []stackitconfig.ConfigurationOption{
+		stackitconfig.WithHTTPClient(s.httpClient),
+		stackitconfig.WithEndpoint(cfg.ApiBasePath),
+	}
+
+	if len(cfg.ServiceAccountBaseUrl) > 0 {
+		options = append(options, stackitconfig.WithTokenEndpoint(cfg.ServiceAccountBaseUrl))
+	}
+
+	switch authType {
+	case AuthTypeDynamicSA:
+		saKeyJSON, err := s.secretFetcher.StringFromSecret(
+			cfg.ServiceAccountSecretNamespace,
+			cfg.ServiceAccountSecretRef,
+			cfg.ServiceAccountSecretKey,
 		)
-	default:
-		authToken, err := s.getAuthToken(cfg)
 		if err != nil {
-			return repository.Config{}, err
+			return repository.Config{}, fmt.Errorf("failed to fetch service account key from secret: %w", err)
 		}
-		config.AuthToken = authToken
-		s.logger.Info("Using auth token for authentication")
+		options = append(options, stackitconfig.WithServiceAccountKey(saKeyJSON))
+		s.logger.Info("Using dynamic service account key from secret for authentication")
+	case AuthTypeStaticSA:
+		options = append(options, stackitconfig.WithServiceAccountKeyPath(cfg.ServiceAccountKeyPath))
+		s.logger.Info("Using static service account key path for authentication", zap.String("saKeyPath", cfg.ServiceAccountKeyPath))
+	case AuthTypeWIF:
+		options = append(options, stackitconfig.WithWorkloadIdentityFederationAuth())
+		s.logger.Info("Using workload identity federation for authentication")
+	case AuthTypeDefault:
+		s.logger.Info("Using default SDK authentication flow")
 	}
 
-	return config, nil
+	apiClient, err := stackitdnsclient.NewAPIClient(options...)
+	if err != nil {
+		return repository.Config{}, fmt.Errorf("failed to create STACKIT API client: %w", err)
+	}
+
+	return repository.Config{
+		ProjectId: cfg.ProjectId,
+		ApiClient: apiClient,
+	}, nil
 }
 
 func getZoneDnsNameAndRRSetName(ch *v1alpha1.ChallengeRequest) (string, string) {
-	// Remove trailing . from domain
 	domain := strings.TrimSuffix(ch.ResolvedZone, ".")
 
 	return domain, ch.ResolvedFQDN

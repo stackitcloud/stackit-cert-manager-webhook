@@ -40,7 +40,7 @@ func main() {
 			}).DialContext,
 			TLSHandshakeTimeout:   5 * time.Second,
 			ResponseHeaderTimeout: 10 * time.Second,
-			IdleConnTimeout:      30 * time.Second,
+			IdleConnTimeout:       30 * time.Second,
 		},
 	}
 

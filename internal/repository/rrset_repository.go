@@ -39,13 +39,12 @@ func (r rrSetRepositoryFactory) NewRRSetRepository(
 	config Config,
 	zoneId string,
 ) (RRSetRepository, error) {
-	apiClient, err := chooseNewStackitDnsClient(config)
-	if err != nil {
-		return nil, err
+	if config.ApiClient == nil {
+		return nil, fmt.Errorf("API client is not initialized")
 	}
 
 	return &rrSetRepository{
-		apiClient: apiClient,
+		apiClient: config.ApiClient,
 		projectId: config.ProjectId,
 		zoneId:    zoneId,
 	}, nil
@@ -142,7 +141,9 @@ func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error
 				return ErrRRSetNotFound
 			}
 		}
+
+		return err
 	}
 
-	return err
+	return nil
 }

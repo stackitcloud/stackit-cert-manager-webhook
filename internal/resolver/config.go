@@ -82,7 +82,7 @@ func setDefaultValues(cfg *StackitDnsProviderConfig) {
 		cfg.AuthTokenSecretKey = "auth-token"
 	}
 	if cfg.AcmeTxtRecordTTL == 0 {
-		cfg.AcmeTxtRecordTTL = 600
+		cfg.AcmeTxtRecordTTL = 60
 	}
 }
 

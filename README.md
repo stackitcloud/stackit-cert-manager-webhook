@@ -188,7 +188,7 @@ spec:
 - apiBasePath: The base path for the STACKIT DNS API. (Default: https://dns.api.stackit.cloud)
 - serviceAccountKeyPath: The path to the service account key file. The file must be mounted into the container.
 - serviceAccountBaseUrl: The base URL for the STACKIT service account API. (Default: https://service-account.api.stackit.cloud/token)
-- acmeTxtRecordTTL: The TTL for the ACME TXT record. (Default: 600)
+- acmeTxtRecordTTL: The TTL for the ACME TXT record. (Default: 60)
 
 ## Test Procedures
 

@@ -1,0 +1,71 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: stackit-tenant-issuer
+  namespace: e2e-tenant
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: e2e-tenant@stackit.de
+    privateKeySecretRef:
+      name: stackit-tenant-issuer-key
+    solvers:
+      - dns01:
+          webhook:
+            solverName: stackit
+            groupName: acme.stackit.de
+            config:
+              projectId: ${PROJECT_ID}
+              serviceAccountSecretRef: stackit-dynamic-auth
+              serviceAccountSecretKey: sa.json
+              serviceAccountSecretNamespace: e2e-tenant
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-tenant-cert
+  namespace: e2e-tenant
+spec:
+  secretName: e2e-tenant-cert-tls
+  issuerRef:
+    name: stackit-tenant-issuer
+    kind: Issuer
+  commonName: "e2e-tenant.${ZONE_NAME}"
+  dnsNames:
+    - "e2e-tenant.${ZONE_NAME}"
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: stackit-tenant-issuer-two
+  namespace: e2e-tenant-two
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: e2e-tenant-two@stackit.de
+    privateKeySecretRef:
+      name: stackit-tenant-issuer-key-two
+    solvers:
+      - dns01:
+          webhook:
+            solverName: stackit
+            groupName: acme.stackit.de
+            config:
+              projectId: ${PROJECT_ID}
+              serviceAccountSecretRef: stackit-dynamic-auth
+              serviceAccountSecretKey: sa.json
+              serviceAccountSecretNamespace: e2e-tenant-two
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-tenant-cert-two
+  namespace: e2e-tenant-two
+spec:
+  secretName: e2e-tenant-cert-tls-two
+  issuerRef:
+    name: stackit-tenant-issuer-two
+    kind: Issuer
+  commonName: "e2e-tenant-two.${ZONE_NAME}"
+  dnsNames:
+    - "e2e-tenant-two.${ZONE_NAME}"

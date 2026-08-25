@@ -134,21 +134,31 @@ e2e-cert-manager:
 	kubectl wait --for=condition=Available --timeout=300s deployment/cert-manager -n cert-manager
 	kubectl wait --for=condition=Available --timeout=300s deployment/cert-manager-webhook -n cert-manager
 
+.PHONY: e2e-namespaces
+e2e-namespaces:
+	@echo "=> Creating test namespaces and secrets..."
+	kubectl create namespace e2e-tenant --dry-run=client -o yaml | kubectl apply -f -
+	kubectl create secret generic stackit-dynamic-auth -n e2e-tenant \
+		--from-file=sa.json=$(AUTH_KEY_PATH) \
+		--dry-run=client -o yaml | kubectl apply -f -
+	kubectl create namespace e2e-tenant-two --dry-run=client -o yaml | kubectl apply -f -
+	kubectl create secret generic stackit-dynamic-auth -n e2e-tenant-two \
+		--from-file=sa.json=$(AUTH_KEY_PATH) \
+		--dry-run=client -o yaml | kubectl apply -f -
+
 .PHONY: e2e-deploy-webhook
 e2e-deploy-webhook:
 	@echo "=> Deploying stackit-cert-manager-webhook..."
 	kubectl create secret generic stackit-sa-authentication -n cert-manager \
 		--from-file=sa.json=$(AUTH_KEY_PATH) \
 		--dry-run=client -o yaml | kubectl apply -f -
-
 	helm upgrade --install stackit-cert-manager-webhook ./deploy/stackit \
 		--namespace cert-manager \
 		--set image.repository=stackitcloud/stackit-cert-manager-webhook \
 		--set image.tag=e2e \
 		--set image.pullPolicy=Never \
 		--set stackitSaAuthentication.enabled=true \
-		--set stackitSaAuthentication.secretName=stackit-sa-authentication
-
+		--set stackitSaAuthentication.secretAccessScope=issuer
 	kubectl wait --for=condition=available --timeout=120s deployment/stackit-cert-manager-webhook -n cert-manager
 
 .PHONY: e2e-run-kuttl
@@ -171,6 +181,6 @@ clean-e2e-local:
 
 # The main target chains the dependencies together
 .PHONY: test-e2e-local
-test-e2e-local: e2e-check-env e2e-cluster e2e-cert-manager e2e-deploy-webhook
+test-e2e-local: e2e-check-env e2e-cluster e2e-cert-manager e2e-namespaces e2e-deploy-webhook
 	@$(MAKE) e2e-run-kuttl || ( $(MAKE) clean-e2e-local && exit 1 )
 	@$(MAKE) clean-e2e-local

@@ -1,0 +1,26 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+    - script: |
+          ZONE="${ZONE_NAME}"
+          
+          AUTH_NS=$(dig +short NS "$ZONE" | head -n 1)
+          if [ -z "$AUTH_NS" ]; then
+            echo "ERROR: Could not determine authoritative nameserver for $ZONE"
+            return 1
+          fi
+          
+          check_record() {
+            local RECORD_NAME=$1
+            RESULT=$(dig "@$AUTH_NS" -t TXT +short "$RECORD_NAME")
+            if [ -n "$RESULT" ]; then
+              echo "FAILED: $RECORD_NAME still exists. Result: $RESULT"
+              return 1
+            fi
+            echo "SUCCESS: TXT record $RECORD_NAME successfully deleted."
+            return 0
+          }
+          
+          check_record "_acme-challenge.e2e-tenant.${ZONE_NAME}" && \
+          check_record "_acme-challenge.e2e-tenant-two.${ZONE_NAME}"

@@ -64,7 +64,9 @@ func (r *rrSetRepository) FetchRRSetForZone(
 	var pager int32 = 1
 	listRequest := r.apiClient.DefaultAPI.ListRecordSets(ctx, r.projectId, r.zoneId).
 		Page(pager).PageSize(10000).
-		NameEq(rrSetName).TypeEq(stackitdnsclient.ListRecordSetsTypeEqParameter(rrSetType))
+		NameEq(rrSetName).
+		TypeEq(stackitdnsclient.ListRecordSetsTypeEqParameter(rrSetType)).
+		StateNeq(stackitdnsclient.LISTRECORDSETSSTATENEQPARAMETER_DELETE_SUCCEEDED)
 
 	rrSetResponse, err := listRequest.Execute()
 	if err != nil {

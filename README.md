@@ -14,7 +14,7 @@ Facilitate a webhook integration for leveraging the STACKIT DNS alongside its [A
 ## Installation
 
 ```bash
-helm repo add stackit-cert-manager-webhook [https://stackitcloud.github.io/stackit-cert-manager-webhook](https://stackitcloud.github.io/stackit-cert-manager-webhook)
+helm repo add stackit-cert-manager-webhook https://stackitcloud.github.io/stackit-cert-manager-webhook
 helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-manager-webhook/stackit-cert-manager-webhook
 ```
 
@@ -45,7 +45,7 @@ This method is recommended for multi-tenant clusters where different `Issuer` or
      namespace: default
    spec:
      acme:
-       server: [https://acme-v02.api.letsencrypt.org/directory](https://acme-v02.api.letsencrypt.org/directory)
+       server: https://acme-v02.api.letsencrypt.org/directory
        email: example@example.com
        privateKeySecretRef:
          name: letsencrypt-prod
@@ -86,7 +86,7 @@ This method mounts a single Service Account key JSON file into the webhook Pod. 
      name: letsencrypt-prod
    spec:
      acme:
-       server: [https://acme-v02.api.letsencrypt.org/directory](https://acme-v02.api.letsencrypt.org/directory)
+       server: https://acme-v02.api.letsencrypt.org/directory
        email: example@example.com
        privateKeySecretRef:
          name: letsencrypt-prod
@@ -169,7 +169,7 @@ make lint
 ### Go Conformance Testing:
 Runs the official cert-manager Go solver test suite in memory against the STACKIT API:
 ```bash
-AUTH_KEY_PATH="<path-to-sa-key.json>" TEST_ZONE_NAME="example.com" make test-e2e-conformance
+TEST_ZONE_NAME="example.com" make test-e2e-conformance
 ```
 Follow the comprehensive guide available [here](e2e_test/README.md).
 

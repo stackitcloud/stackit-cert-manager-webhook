@@ -141,7 +141,7 @@ func (s *presentSuite) TestConfigProviderError() {
 	s.Error(err)
 }
 
-func (s *presentSuite) TestFailGetAuthToken() {
+func (s *presentSuite) TestFailFetchServiceAccountKeyFromSecret() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{

@@ -94,10 +94,10 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 		if cfg.ServiceAccountSecretNamespace == "" {
 			cfg.ServiceAccountSecretNamespace = webhookNamespace
 		}
+	}
 
-		if err := validateSecretNamespace(cfg.ServiceAccountSecretNamespace, webhookNamespace, scope); err != nil {
-			return cfg, err
-		}
+	if err := validateSecretNamespace(cfg.ServiceAccountSecretNamespace, webhookNamespace, scope); err != nil {
+		return cfg, err
 	}
 
 	if err := validateConfig(&cfg); err != nil {

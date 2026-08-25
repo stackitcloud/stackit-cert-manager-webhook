@@ -25,7 +25,7 @@ For appropriate test initialization within the STACKIT ecosystem, you must confi
 
    Generate `secret.yaml` from the provided example:
    ```bash
-   export STACKIT_SA_KEY_B64=$(cat /path/to/your/sa.json | base64 -w 0)
+   export STACKIT_SA_KEY=$(cat /path/to/your/sa.json | base64 -w 0)
    envsubst < ../testdata/stackit/secret.yaml.example > ../testdata/stackit/secret.yaml
    ```
 

@@ -9,9 +9,7 @@
 [![CI](https://github.com/stackitcloud/stackit-cert-manager-webhook/actions/workflows/main.yml/badge.svg)](https://github.com/stackitcloud/stackit-cert-manager-webhook/actions/workflows/main.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/stackitcloud/stackit-cert-manager-webhook)](https://goreportcard.com/report/github.com/stackitcloud/stackit-cert-manager-webhook)
 
-Facilitate a webhook integration for leveraging the STACKIT DNS alongside
-its [API](https://docs.api.stackit.cloud/documentation/dns/version/v1) to act as a DNS01
-ACME Issuer with [cert-manager](https://cert-manager.io/docs/).
+Facilitate a webhook integration for leveraging the STACKIT DNS alongside its [API](https://docs.api.stackit.cloud/documentation/dns/version/v1) to act as a DNS01 ACME Issuer with [cert-manager](https://cert-manager.io/docs/).
 
 ## Installation
 
@@ -20,175 +18,136 @@ helm repo add stackit-cert-manager-webhook https://stackitcloud.github.io/stacki
 helm install stackit-cert-manager-webhook --namespace cert-manager stackit-cert-manager-webhook/stackit-cert-manager-webhook
 ```
 
-## Usage
+## Authentication & Usage
 
-1. ***Initiation of STACKIT Service Account Secret:***
-    ```bash
-    kubectl create secret generic stackit-sa-authentication \
-      -n cert-manager \
-      --from-literal=sa.json='{
-      "id": "4e1fe486-b463-4bcd-9210-288854268e34",
-      "publicKey": "-----BEGIN PUBLIC KEY-----\nPUBLIC_KEY\n-----END PUBLIC KEY-----",
-      "createdAt": "2024-04-02T13:12:17.678+00:00",
-      "validUntil": "2024-04-15T22:00:00.000+00:00",
-      "keyType": "USER_MANAGED",
-      "keyOrigin": "GENERATED",
-      "keyAlgorithm": "RSA_2048",
-      "active": true,
-      "credentials": {
-        "kid": "kid",
-        "iss": "iss",
-        "sub": "sub",
-        "aud": "aud",
-        "privateKey": "-----BEGIN PRIVATE KEY-----\nPRIVATE-KEY==\n-----END PRIVATE KEY-----"
-      }
-    }'
-    ```
-   You now need to adjust the deployment via helm to use the secret:
-    ```bash
-    helm upgrade stackit-cert-manager-webhook \
-      --namespace cert-manager \
-      stackit-cert-manager-webhook/stackit-cert-manager-webhook \
+The STACKIT webhook requires authentication against the STACKIT DNS API. Depending on your cluster architecture and security policies, you can authenticate using one of the three methods below.
+
+The webhook will explicitly fail if multiple mutually exclusive authentication methods are configured for a single Issuer.
+
+### Option A: Dynamic Service Account Key (Multi-Tenant)
+
+This method is recommended for multi-tenant clusters where different `Issuer` or `ClusterIssuer` resources manage zones across different STACKIT projects. The webhook fetches the Service Account JSON directly from a Kubernetes Secret per challenge.
+
+1. **Create the Secret containing the SA JSON:**
+   ```bash
+   kubectl create secret generic stackit-tenant-a-auth \
+     -n default \
+     --from-file=sa.json=/path/to/tenant-a-sa.json
+   ```
+
+2. **Configure the Issuer:**
+   Ensure the `serviceAccountSecretNamespace` matches the namespace of your Secret. If you want the webhook to read secrets outside of its own installation namespace, you must set `stackitSaAuthentication.secretAccessScope=issuer` when installing the Helm chart.
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: Issuer
+   metadata:
+     name: letsencrypt-prod
+     namespace: default
+   spec:
+     acme:
+       server: https://acme-v02.api.letsencrypt.org/directory
+       email: example@example.com
+       privateKeySecretRef:
+         name: letsencrypt-prod
+       solvers:
+       - dns01:
+           webhook:
+             solverName: stackit
+             groupName: acme.stackit.de
+             config:
+               projectId: <STACKIT ID PROJECT>
+               serviceAccountSecretRef: stackit-tenant-a-auth
+               serviceAccountSecretKey: sa.json
+               serviceAccountSecretNamespace: default
+   ```
+
+### Option B: Static Service Account Key (Single Tenant / Global Fallback)
+
+This method mounts a single Service Account key JSON file into the webhook Pod. It is ideal for single-tenant clusters where the webhook manages domains for a single STACKIT project or organization.
+
+1. **Deploy the Webhook with the Key Mounted:**
+   Create a secret in the `cert-manager` namespace and install the Helm chart with mounting enabled:
+   ```bash
+   kubectl create secret generic stackit-sa-authentication \
+     -n cert-manager \
+     --from-file=sa.json=/path/to/global-sa.json
+
+   helm upgrade --install stackit-cert-manager-webhook stackit-cert-manager-webhook/stackit-cert-manager-webhook \
+     --namespace cert-manager \
      --set stackitSaAuthentication.enabled=true
-    ```
+   ```
 
-2. ***Configuration of ClusterIssuer/Issuer:***   
-   For scenarios wherein zones and record sets are encapsulated within a singular project, utilize a ClusterIssuer:
-    ```yaml
-    apiVersion: cert-manager.io/v1
-    kind: ClusterIssuer
-    metadata:
-      name: letsencrypt-prod
-    spec:
-      acme:
-        server: https://acme-v02.api.letsencrypt.org/directory
-        email: example@example.com # Replace this with your email address
-        privateKeySecretRef:
-          name: letsencrypt-prod
-        solvers:
-        - dns01:
-            webhook:
-              solverName: stackit
-              groupName: acme.stackit.de
-              config:
-                projectId: <STACKIT PROJECT ID>
-    ```
+2. **Configure the Issuer:**
+   Reference the mounted file path.
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: ClusterIssuer
+   metadata:
+     name: letsencrypt-prod
+   spec:
+     acme:
+       server: https://acme-v02.api.letsencrypt.org/directory
+       email: example@example.com
+       privateKeySecretRef:
+         name: letsencrypt-prod
+       solvers:
+       - dns01:
+           webhook:
+             solverName: stackit
+             groupName: acme.stackit.de
+             config:
+               projectId: <STACKIT ID PROJECT>
+               serviceAccountKeyPath: /var/run/secrets/stackit/sa.json
+   ```
 
-   For diverse project architectures where zones are spread across varying projects, use an Issuer (namespaces are separate):
-    ```yaml
-    apiVersion: cert-manager.io/v1
-    kind: Issuer
-    metadata:
-      name: letsencrypt-prod
-      namespace: default
-    spec:
-      acme:
-        server: https://acme-v02.api.letsencrypt.org/directory
-        email: example@example.com # Replace this with your email address
-        privateKeySecretRef:
-          name: letsencrypt-prod
-        solvers:
-        - dns01:
-            webhook:
-              solverName: stackit
-              groupName: acme.stackit.de
-              config:
-                projectId: <STACKIT PROJECT ID>
-    ```
-   *Note on service accounts and namespaces:*
-    - Issuer-per-namespace (recommended for isolation): create a STACKIT service-account key (sa.json) for each STACKIT project you need to manage and place that key in a Kubernetes Secret in the same namespace as the Issuer. This means one sa.json (one SA key) per Issuer/namespace when the Issuers target different STACKIT projects.
-      Example (create a secret in the Issuer namespace):
-      ```bash
-      kubectl create secret generic stackit-sa-authentication \
-        -n <issuer-namespace> \
-        --from-literal=sa.json='{"id":"...","credentials":{...}}'
-      ```
-      Ensure the webhook can read the secret in that namespace (create the secret where the Issuer lives).
-    - Alternative (single SA key for multiple projects): you can grant the service account broader permissions at folder or organization level so one sa.json can manage zones across multiple projects. This is more convenient but grants wider access — evaluate security and follow least-privilege principles.
-    - Tradeoffs:
-        - Per-namespace/per-project SA keys: better isolation and least privilege, easier to rotate keys per project.
-        - Folder/org-level SA key: lower operational overhead (single key), but larger blast radius if compromised.
+### Option C: Workload Identity Federation (WIF)
 
-3. ***Demonstration of Ingress Integration with Wildcard SSL/TLS Certificate Generation***   
-   Given the preceding configuration, it is possible to exploit the capabilities of the Issuer or ClusterIssuer to
-   dynamically produce wildcard SSL/TLS certificates in the following manner:
-    ```yaml
-    apiVersion: cert-manager.io/v1
-    kind: Certificate
-    metadata:
-      name: wildcard-example
-      namespace: default
-    spec:
-      secretName: wildcard-example-tls
-      issuerRef:
-        name: letsencrypt-prod
-        kind: Issuer
-      commonName: '*.example.runs.onstackit.cloud' # project must be the owner of this zone
-      duration: 8760h0m0s
-      dnsNames:
-        - example.runs.onstackit.cloud
-        - '*.example.runs.onstackit.cloud'
-    ---
-    apiVersion: networking.k8s.io/v1
-    kind: Ingress
-    metadata:
-      name: app-ingress
-      namespace: default
-      annotations:
-        ingress.kubernetes.io/rewrite-target: /
-        kubernetes.io/ingress.class: "nginx"
-    spec:
-      rules:
-        - host: "app.example.runs.onstackit.cloud"
-          http:
-            paths:
-              - path: /
-                pathType: Prefix
-                backend:
-                  service:
-                    name: webapp
-                    port:
-                      number: 80
-      tls:
-        - hosts:
-            - "app.example.runs.onstackit.cloud"
-          secretName: wildcard-example-tls
-    ```
+If your cluster supports Workload Identity Federation (e.g., SKE clusters), you can avoid managing long-lived keys entirely by projecting a short-lived token into the webhook container.
+
+1. **Annotate the Webhook ServiceAccount:**
+   Update your Helm deployment to instruct the identity webhook to inject the federated token.
+   ```yaml
+   # values.yaml
+   serviceAccount:
+     annotations:
+       workload-identity.stackit.cloud/service-account-email: "your-service-account@sa.stackit.cloud"
+   ```
+
+2. **Configure the Issuer:**
+   Explicitly instruct the webhook to use the WIF flow.
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: ClusterIssuer
+   metadata:
+     name: letsencrypt-prod
+   spec:
+     acme:
+       # ...
+       solvers:
+       - dns01:
+           webhook:
+             solverName: stackit
+             groupName: acme.stackit.de
+             config:
+               projectId: <STACKIT ID PROJECT>
+               useWorkloadIdentityFederation: true
+   ```
 
 ## Config Options
 
-The following table delineates the configuration options available for the STACKIT Cert Manager Webhook:
+The following table delineates the configuration options available under the `config` block of the STACKIT Cert Manager Webhook solver:
 
-```yaml
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: letsencrypt-prod
-  namespace: default
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: example@example.com # Replace this with your email address
-    privateKeySecretRef:
-      name: letsencrypt-prod
-    solvers:
-      - dns01:
-        webhook:
-          solverName: stackit
-          groupName: acme.stackit.de
-          config:
-            projectId: string
-            apiBasePath: string
-            serviceAccountKeyPath: string
-            serviceAccountBaseUrl: string
-            acmeTxtRecordTTL: int64
-```
-
-- projectId: The unique identifier for the STACKIT project.
-- apiBasePath: The base path for the STACKIT DNS API. (Default: https://dns.api.stackit.cloud)
-- serviceAccountKeyPath: The path to the service account key file. The file must be mounted into the container.
-- serviceAccountBaseUrl: The base URL for the STACKIT service account API. (Default: https://service-account.api.stackit.cloud/token)
-- acmeTxtRecordTTL: The TTL for the ACME TXT record. (Default: 600)
+| Key | Type | Default | Description |
+|-----|------|--------|-------------|
+| `projectId` | string | `""` | **Required.** The unique identifier for the STACKIT project. |
+| `apiBasePath` | string | `"https://dns.api.stackit.cloud"` | The base path for the STACKIT DNS API. |
+| `serviceAccountSecretRef` | string | `""` | Name of the Kubernetes Secret containing the SA JSON. |
+| `serviceAccountSecretKey` | string | `""` | The key within the Secret mapped to the JSON content. |
+| `serviceAccountSecretNamespace` | string | `<webhook-namespace>` | The namespace where the Secret is located. |
+| `serviceAccountKeyPath` | string | `""` | The absolute file path to a statically mounted SA JSON key inside the webhook container. |
+| `useWorkloadIdentityFederation` | bool | `false` | Explicitly enables STACKIT Workload Identity Federation authentication. |
+| `serviceAccountBaseUrl` | string | `""` | Custom URL for trading SA keys for access tokens. |
+| `acmeTxtRecordTTL` | int32 | `60` | The TTL for the ACME TXT challenge record. |
 
 ## Test Procedures
 
@@ -210,12 +169,13 @@ make lint
 ### Go Conformance Testing:
 Runs the official cert-manager Go solver test suite in memory against the STACKIT API:
 ```bash
-STACKIT_TOKEN="<token>" TEST_ZONE_NAME="example.com" make test-e2e-conformance
+TEST_ZONE_NAME="example.com" make test-e2e-conformance
 ```
 Follow the comprehensive guide available [here](e2e_test/README.md).
 
 ### Kubernetes Integration (E2E) Testing:
-Spins up a local Kind cluster, installs cert-manager, builds and deploys the webhook, and executes Kuttl integration tests (testing single-record lifecycle and wildcard certificates against Let's Encrypt Staging):
+Spins up a local Kind cluster, installs cert-manager, builds and deploys the webhook, and executes Kuttl integration tests covering both single-tenant (static fallback) and multi-tenant (dynamic SA fetching) flows against Let's Encrypt Staging:
+
 ```bash
 make test-e2e-local \
   PROJECT_ID="<your-project-id>" \

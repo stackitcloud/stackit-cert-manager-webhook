@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
+	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stretchr/testify/require"
 )
@@ -155,11 +156,15 @@ func setupRRSetRepositoryTests(t *testing.T) (context.Context, repository.Config
 	server := getTestServer(t)
 	t.Cleanup(server.Close)
 
+	apiClient, _ := stackitdnsclient.NewAPIClient(
+		stackitconfig.WithEndpoint(server.URL),
+		stackitconfig.WithHTTPClient(server.Client()),
+		stackitconfig.WithoutAuthentication(),
+	)
+
 	config := repository.Config{
-		ApiBasePath: server.URL,
-		AuthToken:   "test-token",
-		ProjectId:   "1234",
-		HttpClient:  server.Client(),
+		ProjectId: "1234",
+		ApiClient: apiClient,
 	}
 	rrSetRepositoryFactory := repository.NewRRSetRepositoryFactory()
 

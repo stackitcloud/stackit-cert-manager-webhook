@@ -1,6 +1,6 @@
 # stackit-cert-manager-webhook
 
-![Version: 0.4.1](https://img.shields.io/badge/Version-0.4.1-informational?style=flat-square) ![AppVersion: v0.4.1](https://img.shields.io/badge/AppVersion-v0.4.1-informational?style=flat-square)
+![Version: 0.4.11](https://img.shields.io/badge/Version-0.4.11-informational?style=flat-square) ![AppVersion: v0.4.11](https://img.shields.io/badge/AppVersion-v0.4.11-informational?style=flat-square)
 
 A Helm chart for stackitcloud/stackit-cert-manager-webhook
 
@@ -35,11 +35,13 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | service | object | `{"port":443,"type":"ClusterIP"}` | Configuration for the webhook service. |
 | service.port | int | `443` | port of the service. |
 | service.type | string | `"ClusterIP"` | type of the service. |
-| stackitSaAuthentication | object | `{"enabled":false,"fileName":"sa.json","mountPath":"/var/run/secrets/stackit","secretAccessScope":"webhook","secretName":"stackit-sa-authentication"}` | Configuration for the stackit service account keys. |
-| stackitSaAuthentication.enabled | bool | `false` | enabled flag for the stackit service account keys. |
-| stackitSaAuthentication.fileName | string | `"sa.json"` | key of the service account key in the secret. Which will be later be used to load in keys in the pod as well. |
-| stackitSaAuthentication.mountPath | string | `"/var/run/secrets/stackit"` | Path where the secret will be mounted in the pod. |
-| stackitSaAuthentication.secretAccessScope | string | `"webhook"` | secret access scope for auth token lookup. Use `webhook` for namespace-scoped access (recommended) or `issuer` to allow issuer-namespace secret lookup. |
-| stackitSaAuthentication.secretName | string | `"stackit-sa-authentication"` | secret where the service account key is stored. Should be in the same namespace as the webhook since it will be mounted into the pod. |
+| serviceAccount | object | `{"annotations":{}}` | Service Account |
+| serviceAccount.annotations | object | `{}` | service account annotations. Add workload-identity annotations here for WIF authentication. |
+| stackitSaAuthentication | object | `{"enabled":false,"fileName":"sa.json","mountPath":"/var/run/secrets/stackit","secretAccessScope":"webhook","secretName":"stackit-sa-authentication"}` | Configuration for the stackit service account keys (Static Global Fallback). |
+| stackitSaAuthentication.enabled | bool | `false` | enabled flag for mounting the static STACKIT Service Account key JSON. |
+| stackitSaAuthentication.fileName | string | `"sa.json"` | key of the Service Account JSON within the secret. |
+| stackitSaAuthentication.mountPath | string | `"/var/run/secrets/stackit"` | Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit/ |
+| stackitSaAuthentication.secretAccessScope | string | `"webhook"` | secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended) or "issuer" to allow issuer-namespace secret lookup. |
+| stackitSaAuthentication.secretName | string | `"stackit-sa-authentication"` | secret where the static Service Account key JSON is stored. Should be in the same namespace as the webhook since it will be mounted into the pod. |
 | tolerations | list | `[]` | Tolerations for the webhook. |
 

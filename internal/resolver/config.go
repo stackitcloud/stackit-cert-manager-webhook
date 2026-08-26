@@ -23,18 +23,52 @@ type defaultConfigProvider struct {
 
 const (
 	secretAccessScopeWebhook = "webhook"
-	secretAccessScopeIssuer   = "issuer"
+	secretAccessScopeIssuer  = "issuer"
+)
+
+type AuthType int
+
+const (
+	AuthTypeDefault AuthType = iota
+	AuthTypeDynamicSA
+	AuthTypeStaticSA
+	AuthTypeWIF
 )
 
 type StackitDnsProviderConfig struct {
-	ProjectId                string `json:"projectId"`
-	ApiBasePath              string `json:"apiBasePath"`
-	AuthTokenSecretRef       string `json:"authTokenSecretRef"`
-	AuthTokenSecretKey       string `json:"authTokenSecretKey"`
-	AuthTokenSecretNamespace string `json:"authTokenSecretNamespace"`
-	ServiceAccountKeyPath    string `json:"serviceAccountKeyPath"`
-	ServiceAccountBaseUrl    string `json:"serviceAccountBaseUrl"`
-	AcmeTxtRecordTTL         int32  `json:"acmeTxtRecordTTL"`
+	ProjectId                     string `json:"projectId"`
+	ApiBasePath                   string `json:"apiBasePath"`
+	ServiceAccountSecretRef       string `json:"serviceAccountSecretRef"`
+	ServiceAccountSecretKey       string `json:"serviceAccountSecretKey"`
+	ServiceAccountSecretNamespace string `json:"serviceAccountSecretNamespace"`
+	ServiceAccountKeyPath         string `json:"serviceAccountKeyPath"`
+	UseWorkloadIdentityFederation bool   `json:"useWorkloadIdentityFederation"`
+	ServiceAccountBaseUrl         string `json:"serviceAccountBaseUrl"`
+	AcmeTxtRecordTTL              int32  `json:"acmeTxtRecordTTL"`
+}
+
+func determineAuthType(cfg *StackitDnsProviderConfig) (AuthType, error) {
+	var activeTypes []AuthType
+
+	if len(cfg.ServiceAccountSecretRef) > 0 {
+		activeTypes = append(activeTypes, AuthTypeDynamicSA)
+	}
+	if len(cfg.ServiceAccountKeyPath) > 0 {
+		activeTypes = append(activeTypes, AuthTypeStaticSA)
+	}
+	if cfg.UseWorkloadIdentityFederation {
+		activeTypes = append(activeTypes, AuthTypeWIF)
+	}
+
+	if len(activeTypes) > 1 {
+		return AuthTypeDefault, fmt.Errorf("ambiguous authentication configuration: specify at most one of serviceAccountSecretRef, serviceAccountKeyPath, or useWorkloadIdentityFederation")
+	}
+
+	if len(activeTypes) == 1 {
+		return activeTypes[0], nil
+	}
+
+	return AuthTypeDefault, nil
 }
 
 func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProviderConfig, error) {
@@ -50,17 +84,7 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 
 	setDefaultValues(&cfg)
 
-	webhookNamespace, err := determineNamespace(d.fileNamespaceName)
-	if err != nil {
-		return cfg, err
-	}
-
-	scope := d.secretAccessScope
-	if scope == "" || scope == secretAccessScopeWebhook {
-		cfg.AuthTokenSecretNamespace = webhookNamespace
-	}
-
-	if err := validateSecretNamespace(cfg.AuthTokenSecretNamespace, webhookNamespace, scope); err != nil {
+	if err := d.resolveNamespace(&cfg); err != nil {
 		return cfg, err
 	}
 
@@ -71,17 +95,39 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 	return cfg, nil
 }
 
+func (d defaultConfigProvider) resolveNamespace(cfg *StackitDnsProviderConfig) error {
+	webhookNamespace, err := determineNamespace(d.fileNamespaceName)
+	if err != nil {
+		return err
+	}
+
+	scope := d.secretAccessScope
+	if (scope == "" || scope == secretAccessScopeWebhook) && cfg.ServiceAccountSecretNamespace == "" {
+		cfg.ServiceAccountSecretNamespace = webhookNamespace
+	}
+
+	if cfg.ServiceAccountSecretRef != "" {
+		if err := validateSecretNamespace(cfg.ServiceAccountSecretNamespace, webhookNamespace, scope); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func validateSecretNamespace(configuredNamespace, webhookNamespace, accessScope string) error {
 	switch accessScope {
 	case "", secretAccessScopeWebhook:
 		if configuredNamespace != webhookNamespace {
-			return fmt.Errorf("authTokenSecretNamespace must be %s, got: %s", webhookNamespace, configuredNamespace)
+			return fmt.Errorf("serviceAccountSecretNamespace must be %s, got: %s", webhookNamespace, configuredNamespace)
 		}
+
 		return nil
 	case secretAccessScopeIssuer:
 		if configuredNamespace == "" {
-			return fmt.Errorf("authTokenSecretNamespace must be specified when secretAccessScope=issuer")
+			return fmt.Errorf("serviceAccountSecretNamespace must be specified when secretAccessScope=issuer")
 		}
+
 		return nil
 	default:
 		return fmt.Errorf("invalid secretAccessScope %q", accessScope)
@@ -140,14 +186,9 @@ func setDefaultValues(cfg *StackitDnsProviderConfig) {
 	if cfg.ApiBasePath == "" {
 		cfg.ApiBasePath = "https://dns.api.stackit.cloud"
 	}
-	if cfg.AuthTokenSecretRef == "" {
-		cfg.AuthTokenSecretRef = "stackit-cert-manager-webhook"
-	}
-	if cfg.AuthTokenSecretKey == "" {
-		cfg.AuthTokenSecretKey = "auth-token"
-	}
+
 	if cfg.AcmeTxtRecordTTL == 0 {
-		cfg.AcmeTxtRecordTTL = 600
+		cfg.AcmeTxtRecordTTL = 60
 	}
 }
 

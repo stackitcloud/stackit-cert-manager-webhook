@@ -1,0 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: cert-manager.io/v1
+    kind: Certificate
+    name: e2e-tenant-cert
+    namespace: e2e-tenant
+  - apiVersion: cert-manager.io/v1
+    kind: Certificate
+    name: e2e-tenant-cert-two
+    namespace: e2e-tenant-two

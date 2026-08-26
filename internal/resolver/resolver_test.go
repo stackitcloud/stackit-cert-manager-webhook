@@ -429,7 +429,7 @@ func (s *presentSuite) TestFailUpdateRRSet() {
 }
 
 func (s *presentSuite) TestTTLPropagation() {
-	ttl := int32(600)
+	ttl := int32(60)
 	// Test Create
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).

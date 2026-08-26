@@ -12,6 +12,12 @@ groupName: acme.stackit.de
 # -- Replicas for the webhook. Since it is a stateless application server that sends requests you can increase the number as you want. Most of the time however, 1 replica is enough.
 replicaCount: 1
 
+# -- Deployment-level annotations.
+annotations: {}
+
+# -- Pod-level annotations.
+podAnnotations: {}
+
 # -- Meta information of the cert-manager itself.
 certManager:
   # -- namespace where the webhook should be installed. Cert-Manager and the webhook should be in the same namespace.
@@ -19,11 +25,11 @@ certManager:
   # -- service account name for the cert-manager.
   serviceAccountName: cert-manager
 
-# -- Service Account 
+# -- Service Account
 serviceAccount:
   # -- service account annotations.
   annotations: {}
- 
+
 # -- Image information for the webhook.
 image:
   # -- repository of the image.
@@ -57,6 +63,11 @@ service:
   type: ClusterIP
   # -- port of the service.
   port: 443
+
+# -- Configuration for the APIService.
+apiService:
+  # -- APIService annotations.
+  annotations: {}
 
 # -- Kubernetes resources for the webhook. Usually limits.cpu=100m, limits.memory=128Mi, requests.cpu=100m, requests.memory=128Mi is enough for the webhook.
 resources:
@@ -104,7 +115,7 @@ additionalVolumeMounts: []
 #     mountPath: /etc/extra-config
 #     readOnly: true
 
-# -- Placeholder for additional env-variables. Apply via "--set"-command  or 
+# -- Placeholder for additional env-variables. Apply via "--set"-command  or
 # -- delete the next line and add your variables as in the commented example below.
 extraEnv: []
 # extraEnv:

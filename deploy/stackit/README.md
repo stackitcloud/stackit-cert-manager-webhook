@@ -1,6 +1,6 @@
 # stackit-cert-manager-webhook
 
-![Version: 0.4.1](https://img.shields.io/badge/Version-0.4.1-informational?style=flat-square) ![AppVersion: v0.4.1](https://img.shields.io/badge/AppVersion-v0.4.1-informational?style=flat-square)
+![Version: 0.4.11](https://img.shields.io/badge/Version-0.4.11-informational?style=flat-square) ![AppVersion: v0.4.11](https://img.shields.io/badge/AppVersion-v0.4.11-informational?style=flat-square)
 
 A Helm chart for stackitcloud/stackit-cert-manager-webhook
 
@@ -11,6 +11,9 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | additionalVolumeMounts | list | `[]` |  |
 | additionalVolumes | list | `[]` |  |
 | affinity | object | `{}` |  |
+| annotations | object | `{}` | Deployment-level annotations. |
+| apiService | object | `{"annotations":{}}` | Configuration for the APIService. |
+| apiService.annotations | object | `{}` | APIService annotations. |
 | certManager | object | `{"namespace":"cert-manager","serviceAccountName":"cert-manager"}` | Meta information of the cert-manager itself. |
 | certManager.namespace | string | `"cert-manager"` | namespace where the webhook should be installed. Cert-Manager and the webhook should be in the same namespace. |
 | certManager.serviceAccountName | string | `"cert-manager"` | service account name for the cert-manager. |
@@ -23,6 +26,7 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | imagePullSecrets | list | `[]` |  |
 | nameOverride | string | `""` | Webhook configuration. |
 | nodeSelector | object | `{}` | Node selector for the webhook. |
+| podAnnotations | object | `{}` | Pod-level annotations. |
 | podSecurityContext.runAsGroup | int | `1000` |  |
 | podSecurityContext.runAsNonRoot | bool | `true` |  |
 | podSecurityContext.runAsUser | int | `1000` |  |
@@ -35,6 +39,8 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | service | object | `{"port":443,"type":"ClusterIP"}` | Configuration for the webhook service. |
 | service.port | int | `443` | port of the service. |
 | service.type | string | `"ClusterIP"` | type of the service. |
+| serviceAccount | object | `{"annotations":{}}` | Service Account |
+| serviceAccount.annotations | object | `{}` | service account annotations. |
 | stackitSaAuthentication | object | `{"enabled":false,"fileName":"sa.json","mountPath":"/var/run/secrets/stackit","secretName":"stackit-sa-authentication"}` | Configuration for the stackit service account keys. |
 | stackitSaAuthentication.enabled | bool | `false` | enabled flag for the stackit service account keys. |
 | stackitSaAuthentication.fileName | string | `"sa.json"` | key of the service account key in the secret. Which will be later be used to load in keys in the pod as well. |

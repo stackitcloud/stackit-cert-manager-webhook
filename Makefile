@@ -1,5 +1,5 @@
 # https://github.com/golangci/golangci-lint/releases
-GOLANGCI_VERSION = 2.12.2
+GOLANGCI_VERSION = 2.13.2
 HELM_DOCS_VERSION = 1.14.2
 LICENCES_IGNORE_LIST = $(shell cat licenses/licenses-ignore-list.txt)
 

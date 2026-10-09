@@ -6,8 +6,6 @@ go 1.27.1
 // please place any replace statements here at the top for visibility and add a
 // comment to it as to when it can be removed
 
-replace sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.7.0
-
 require (
 	github.com/cert-manager/cert-manager v1.21.2
 	github.com/stackitcloud/stackit-sdk-go/core v0.27.1

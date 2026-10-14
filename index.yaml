@@ -2,6 +2,15 @@ apiVersion: v1
 entries:
   stackit-cert-manager-webhook:
   - apiVersion: v1
+    appVersion: v0.5.1
+    created: "2026-10-14T17:48:52.235089369Z"
+    description: A Helm chart for stackitcloud/stackit-cert-manager-webhook
+    digest: aa0668bb6fc3ddeb505e92461b6bd33dd31367e153d09aaf6d4ccf7e6438b9ee
+    name: stackit-cert-manager-webhook
+    urls:
+    - https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/stackit-cert-manager-webhook-0.5.1/stackit-cert-manager-webhook-0.5.1.tgz
+    version: 0.5.1
+  - apiVersion: v1
     appVersion: v0.5.0
     created: "2026-08-26T07:42:03.961751541Z"
     description: A Helm chart for stackitcloud/stackit-cert-manager-webhook
@@ -190,4 +199,4 @@ entries:
     urls:
     - https://github.com/stackitcloud/stackit-cert-manager-webhook/releases/download/v0.2.0/stackit-cert-manager-webhook-0.2.0.tgz
     version: 0.2.0
-generated: "2026-08-26T07:42:03.961853744Z"
+generated: "2026-10-14T17:48:52.235343464Z"

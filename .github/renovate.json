@@ -14,12 +14,6 @@
   },
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor"],
-      "groupName": "{{manager}} minor updates",
-      "groupSlug": "{{manager}}-minor-updates",
-      "description": "Group minor updates per dependency manager/type into a single PR"
-    },
-    {
       "matchPackagePrefixes": ["k8s.io/"],
       "allowedVersions": "<0.35.0",
       "groupName": "kubernetes packages",

@@ -7,10 +7,17 @@
     ":gitSignOff"
   ],
   "dependencyDashboard": false,
+  "osvVulnerabilityAlerts": true,
+  "minimumReleaseAge": "7 days",
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null
+  },
   "packageRules": [
     {
-      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
-      "automerge": true
+      "matchUpdateTypes": ["minor"],
+      "groupName": "{{manager}} minor updates",
+      "groupSlug": "{{manager}}-minor-updates",
+      "description": "Group minor updates per dependency manager/type into a single PR"
     },
     {
       "matchPackagePrefixes": ["k8s.io/"],

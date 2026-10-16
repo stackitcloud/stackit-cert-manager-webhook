@@ -7,11 +7,12 @@
     ":gitSignOff"
   ],
   "dependencyDashboard": false,
+  "osvVulnerabilityAlerts": true,
+  "minimumReleaseAge": "7 days",
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null
+  },
   "packageRules": [
-    {
-      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
-      "automerge": true
-    },
     {
       "matchPackagePrefixes": ["k8s.io/"],
       "allowedVersions": "<0.35.0",

@@ -1,5 +1,5 @@
 # https://github.com/golangci/golangci-lint/releases
-GOLANGCI_VERSION = latest
+GOLANGCI_VERSION = 2.15.0
 HELM_DOCS_VERSION = 1.14.2
 LICENCES_IGNORE_LIST = $(shell cat licenses/licenses-ignore-list.txt)
 
@@ -31,9 +31,10 @@ test:
 mocks:
 	go generate ./...
 
-GOLANGCI_LINT = bin/golangci-lint
+GOLANGCI_LINT = bin/golangci-lint-$(GOLANGCI_VERSION)
 $(GOLANGCI_LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/main/install.sh | bash -s -- -b bin
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/main/install.sh | bash -s -- -b bin v$(GOLANGCI_VERSION)
+	@mv bin/golangci-lint "$(@)"
 
 lint: $(GOLANGCI_LINT) download
 	$(GOLANGCI_LINT) run -v

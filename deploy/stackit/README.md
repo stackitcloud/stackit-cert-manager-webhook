@@ -26,6 +26,17 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | imagePullSecrets | list | `[]` |  |
 | nameOverride | string | `""` | Webhook configuration. |
 | nodeSelector | object | `{}` | Node selector for the webhook. |
+| pki | object | `{"caCertificate":{"duration":"43800h0m0s","privateKey":{"rotationPolicy":"Always"},"renewBefore":"720h0m0s"},"servingCertificate":{"duration":"8760h0m0s","privateKey":{"rotationPolicy":"Always"},"renewBefore":"720h0m0s"}}` | Configuration for the webhook PKI (CA and serving certificates managed by cert-manager). |
+| pki.caCertificate | object | `{"duration":"43800h0m0s","privateKey":{"rotationPolicy":"Always"},"renewBefore":"720h0m0s"}` | Configuration for the self-signed root CA certificate. |
+| pki.caCertificate.duration | string | `"43800h0m0s"` | Duration of the root CA certificate. |
+| pki.caCertificate.privateKey | object | `{"rotationPolicy":"Always"}` | Private key configuration for the root CA certificate. |
+| pki.caCertificate.privateKey.rotationPolicy | string | `"Always"` | Rotation policy of the private key when the certificate is re-issued (`Always` or `Never`). |
+| pki.caCertificate.renewBefore | string | `"720h0m0s"` | How long before expiry the root CA certificate should be renewed. |
+| pki.servingCertificate | object | `{"duration":"8760h0m0s","privateKey":{"rotationPolicy":"Always"},"renewBefore":"720h0m0s"}` | Configuration for the webhook serving certificate. |
+| pki.servingCertificate.duration | string | `"8760h0m0s"` | Duration of the webhook serving certificate. |
+| pki.servingCertificate.privateKey | object | `{"rotationPolicy":"Always"}` | Private key configuration for the webhook serving certificate. |
+| pki.servingCertificate.privateKey.rotationPolicy | string | `"Always"` | Rotation policy of the private key when the certificate is re-issued (`Always` or `Never`). |
+| pki.servingCertificate.renewBefore | string | `"720h0m0s"` | How long before expiry the webhook serving certificate should be renewed. |
 | podAnnotations | object | `{}` | Pod-level annotations. |
 | podSecurityContext.runAsGroup | int | `1000` |  |
 | podSecurityContext.runAsNonRoot | bool | `true` |  |

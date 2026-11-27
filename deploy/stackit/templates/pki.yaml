@@ -29,15 +29,16 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   secretName: {{ include "stackit-cert-manager-webhook.rootCACertificate" . }}
-  duration: 43800h0m0s # 5y
+  duration: {{ .Values.pki.caCertificate.duration }}
+  {{- if .Values.pki.caCertificate.renewBefore }}
+  renewBefore: {{ .Values.pki.caCertificate.renewBefore }}
+  {{- end }}
   issuerRef:
     name: {{ include "stackit-cert-manager-webhook.selfSignedIssuer" . }}
   commonName: "ca.stackit-cert-manager-webhook.cert-manager"
   isCA: true
   privateKey:
-    # Default changed from "Never" to "Always" in cert-manager >= 1.18, ensure
-    # for now that the behavior does not change when cert-manager is updated.
-    rotationPolicy: Never
+    rotationPolicy: {{ .Values.pki.caCertificate.privateKey.rotationPolicy }}
 
 ---
 
@@ -71,14 +72,16 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   secretName: {{ include "stackit-cert-manager-webhook.servingCertificate" . }}
-  duration: 8760h0m0s # 1y
+  duration: {{ .Values.pki.servingCertificate.duration }}
+  {{- if .Values.pki.servingCertificate.renewBefore }}
+  renewBefore: {{ .Values.pki.servingCertificate.renewBefore }}
+  {{- end }}
   issuerRef:
     name: {{ include "stackit-cert-manager-webhook.rootCAIssuer" . }}
   dnsNames:
     - {{ include "stackit-cert-manager-webhook.fullname" . }}
     - {{ include "stackit-cert-manager-webhook.fullname" . }}.{{ .Release.Namespace }}
     - {{ include "stackit-cert-manager-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
+    - {{ include "stackit-cert-manager-webhook.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
   privateKey:
-    # Default changed from "Never" to "Always" in cert-manager >= 1.18, ensure
-    # for now that the behavior does not change when cert-manager is updated.
-    rotationPolicy: Never
+    rotationPolicy: {{ .Values.pki.servingCertificate.privateKey.rotationPolicy }}

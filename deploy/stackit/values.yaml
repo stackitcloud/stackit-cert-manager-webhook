@@ -71,6 +71,29 @@ apiService:
   # -- APIService annotations.
   annotations: {}
 
+# -- Configuration for the webhook PKI (CA and serving certificates managed by cert-manager).
+pki:
+  # -- Configuration for the self-signed root CA certificate.
+  caCertificate:
+    # -- Duration of the root CA certificate.
+    duration: 43800h0m0s
+    # -- How long before expiry the root CA certificate should be renewed.
+    renewBefore: 720h0m0s
+    # -- Private key configuration for the root CA certificate.
+    privateKey:
+      # -- Rotation policy of the private key when the certificate is re-issued (`Always` or `Never`).
+      rotationPolicy: Always
+  # -- Configuration for the webhook serving certificate.
+  servingCertificate:
+    # -- Duration of the webhook serving certificate.
+    duration: 8760h0m0s
+    # -- How long before expiry the webhook serving certificate should be renewed.
+    renewBefore: 720h0m0s
+    # -- Private key configuration for the webhook serving certificate.
+    privateKey:
+      # -- Rotation policy of the private key when the certificate is re-issued (`Always` or `Never`).
+      rotationPolicy: Always
+
 # -- Kubernetes resources for the webhook. Usually limits.cpu=100m, limits.memory=128Mi, requests.cpu=100m, requests.memory=128Mi is enough for the webhook.
 resources:
   {}

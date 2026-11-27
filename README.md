@@ -237,6 +237,8 @@ If your cluster supports Workload Identity Federation (e.g., SKE clusters), you 
    - `serviceAccountKeyPath` must be under `/var/run/secrets/stackit/`.
 6. **Default `acmeTxtRecordTTL` lowered:**
    - Default `acmeTxtRecordTTL` changed from `600` to `60` seconds (introduced in `v0.5.0`).
+7. **Webhook PKI private key rotation policy changed to `Always`:**
+   - The webhook's internal CA and serving certificates (`pki.caCertificate` and `pki.servingCertificate`) now default `privateKey.rotationPolicy` to `Always` (previously `Never`) and expose configurable `duration`, `renewBefore`, and `privateKey.rotationPolicy` under `pki.*` in Helm `values.yaml`.
 
 ### Before & After Migration Examples
 

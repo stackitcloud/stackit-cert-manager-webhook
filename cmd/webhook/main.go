@@ -41,6 +41,8 @@ func main() {
 			TLSHandshakeTimeout:   5 * time.Second,
 			ResponseHeaderTimeout: 10 * time.Second,
 			IdleConnTimeout:       30 * time.Second,
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   10,
 		},
 	}
 

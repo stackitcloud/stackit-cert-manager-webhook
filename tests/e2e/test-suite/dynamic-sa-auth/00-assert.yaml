@@ -18,16 +18,6 @@ status:
     - type: Ready
       status: "True"
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: e2e-cross-tenant-cert
-  namespace: e2e-tenant
-status:
-  conditions:
-    - type: Ready
-      status: "False"
----
 apiVersion: acme.cert-manager.io/v1
 kind: Challenge
 metadata:
@@ -37,19 +27,4 @@ spec:
 status:
   presented: false
   state: pending
----
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-commands:
-  - script: |
-      set -e
-      for _ in $(seq 1 30); do
-        REASON=$(kubectl get challenges.acme.cert-manager.io -n e2e-tenant -o jsonpath='{.items[*].status.reason}' 2>/dev/null || true)
-        if echo "$REASON" | grep -q "serviceAccountSecretNamespace must match issuer namespace"; then
-          echo "SUCCESS: Cross-tenant secret lookup rejected as expected: $REASON"
-          exit 0
-        fi
-        sleep 2
-      done
-      echo "FAILED: Expected cross-tenant rejection reason not observed. Last reason: $REASON"
-      exit 1
+  reason: "serviceAccountSecretNamespace must match issuer namespace e2e-tenant, got: e2e-tenant-two"

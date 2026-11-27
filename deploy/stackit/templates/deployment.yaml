@@ -44,7 +44,7 @@ spec:
               value: {{ .Values.stackitSaAuthentication.secretAccessScope | quote }}
             {{- if .Values.stackitSaAuthentication.enabled }}
             - name: STACKIT_SERVICE_ACCOUNT_KEY_PATH
-              value: "{{ .Values.stackitSaAuthentication.mountPath}}/{{ .Values.stackitSaAuthentication.fileName}}"
+              value: "{{ trimSuffix "/" .Values.stackitSaAuthentication.mountPath }}/{{ .Values.stackitSaAuthentication.fileName }}"
             {{- end }}
             {{- if .Values.extraEnv }}
             {{- range .Values.extraEnv }}

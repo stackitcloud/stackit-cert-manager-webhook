@@ -55,7 +55,7 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | stackitSaAuthentication | object | `{"enabled":false,"fileName":"sa.json","mountPath":"/var/run/secrets/stackit","secretAccessScope":"webhook","secretName":"stackit-sa-authentication"}` | Configuration for STACKIT Service Account authentication and dynamic secret RBAC scope. |
 | stackitSaAuthentication.enabled | bool | `false` | enabled flag for mounting the static STACKIT Service Account key JSON. |
 | stackitSaAuthentication.fileName | string | `"sa.json"` | key of the Service Account JSON within the secret. |
-| stackitSaAuthentication.mountPath | string | `"/var/run/secrets/stackit"` | Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit/ |
+| stackitSaAuthentication.mountPath | string | `"/var/run/secrets/stackit"` | Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit |
 | stackitSaAuthentication.secretAccessScope | string | `"webhook"` | secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended), "issuer" to allow issuer-namespace secret lookup, or "none" to disable secret-reader RBAC when using WIF or static SA. |
 | stackitSaAuthentication.secretName | string | `"stackit-sa-authentication"` | secret where the static Service Account key JSON is stored. Should be in the same namespace as the webhook since it will be mounted into the pod. |
 | tolerations | list | `[]` | Tolerations for the webhook. |

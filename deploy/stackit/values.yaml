@@ -56,7 +56,7 @@ stackitSaAuthentication:
   secretName: stackit-sa-authentication
   # -- key of the Service Account JSON within the secret.
   fileName: sa.json
-  # -- Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit/
+  # -- Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit
   mountPath: /var/run/secrets/stackit
 
 # -- Configuration for the webhook service.

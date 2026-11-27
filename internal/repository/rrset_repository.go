@@ -9,10 +9,7 @@ import (
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 )
 
-var (
-	ErrRRSetNotFound = fmt.Errorf("rrset not found")
-	ErrEmptyRRSet    = fmt.Errorf("empty rrset")
-)
+var ErrRRSetNotFound = fmt.Errorf("rrset not found")
 
 //go:generate mockgen -destination=./mock/rrset_repository.go -source=./rrset_repository.go RRSetRepository
 type RRSetRepository interface {
@@ -39,13 +36,12 @@ func (r rrSetRepositoryFactory) NewRRSetRepository(
 	config Config,
 	zoneId string,
 ) (RRSetRepository, error) {
-	apiClient, err := chooseNewStackitDnsClient(config)
-	if err != nil {
-		return nil, err
+	if config.ApiClient == nil {
+		return nil, fmt.Errorf("API client is not initialized")
 	}
 
 	return &rrSetRepository{
-		apiClient: apiClient,
+		apiClient: config.ApiClient,
 		projectId: config.ProjectId,
 		zoneId:    zoneId,
 	}, nil
@@ -147,7 +143,9 @@ func (r *rrSetRepository) DeleteRRSet(ctx context.Context, rrSetId string) error
 				return ErrRRSetNotFound
 			}
 		}
+
+		return err
 	}
 
-	return err
+	return nil
 }

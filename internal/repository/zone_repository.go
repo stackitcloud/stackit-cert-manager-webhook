@@ -30,13 +30,12 @@ type zoneRepositoryFactory struct{}
 func (z zoneRepositoryFactory) NewZoneRepository(
 	config Config,
 ) (ZoneRepository, error) {
-	apiClient, err := chooseNewStackitDnsClient(config)
-	if err != nil {
-		return nil, err
+	if config.ApiClient == nil {
+		return nil, fmt.Errorf("API client is not initialized")
 	}
 
 	return &zoneRepository{
-		apiClient: apiClient,
+		apiClient: config.ApiClient,
 		projectId: config.ProjectId,
 	}, nil
 }

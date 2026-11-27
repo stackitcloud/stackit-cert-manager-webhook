@@ -1,8 +1,7 @@
 apiVersion: cert-manager.io/v1
-kind: Issuer
+kind: ClusterIssuer
 metadata:
-  name: stackit-e2e-wildcard-issuer
-  namespace: default
+  name: stackit-e2e-wildcard-clusterissuer
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
@@ -25,8 +24,8 @@ metadata:
 spec:
   secretName: e2e-wildcard-cert-tls
   issuerRef:
-    name: stackit-e2e-wildcard-issuer
-    kind: Issuer
+    name: stackit-e2e-wildcard-clusterissuer
+    kind: ClusterIssuer
   commonName: "*.e2e-wildcard.${ZONE_NAME}"
   dnsNames:
     - "e2e-wildcard.${ZONE_NAME}"

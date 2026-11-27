@@ -97,11 +97,23 @@ subjects:
     kind: ServiceAccount
     name: {{ .Values.certManager.serviceAccountName }}
     namespace: {{ .Values.certManager.namespace }}
+{{- $secretScope := .Values.stackitSaAuthentication.secretAccessScope | default "webhook" }}
+{{- if and (ne $secretScope "webhook") (ne $secretScope "issuer") (ne $secretScope "none") }}
+{{- fail (printf "Invalid stackitSaAuthentication.secretAccessScope %q: must be one of webhook, issuer, or none" $secretScope) }}
+{{- end }}
+{{- if ne $secretScope "none" }}
 ---
+{{- if eq $secretScope "issuer" }}
+# Cluster-wide access to the webhook's authentication secret for issuer-scoped mode
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "stackit-cert-manager-webhook.fullname" . }}:secret-reader
+  labels:
+    app: {{ include "stackit-cert-manager-webhook.name" . }}
+    chart: {{ include "stackit-cert-manager-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
 rules:
   - apiGroups:
       - ""
@@ -109,12 +121,38 @@ rules:
       - "secrets"
     verbs:
       - "get"
-      - "watch"
+{{- else }}
+# Namespace-scoped Role for reading the webhook's authentication secret
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "stackit-cert-manager-webhook.fullname" . }}:secret-reader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "stackit-cert-manager-webhook.name" . }}
+    chart: {{ include "stackit-cert-manager-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    verbs:
+      - "get"
+{{- end }}
 ---
+# Binding for the webhook secret reader
+{{- if eq $secretScope "issuer" }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ include "stackit-cert-manager-webhook.fullname" . }}:secret-reader
+  labels:
+    app: {{ include "stackit-cert-manager-webhook.name" . }}
+    chart: {{ include "stackit-cert-manager-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -124,6 +162,28 @@ subjects:
     kind: ServiceAccount
     name: {{ include "stackit-cert-manager-webhook.fullname" . }}
     namespace: {{ .Release.Namespace }}
+{{- else }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "stackit-cert-manager-webhook.fullname" . }}:secret-reader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "stackit-cert-manager-webhook.name" . }}
+    chart: {{ include "stackit-cert-manager-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "stackit-cert-manager-webhook.fullname" . }}:secret-reader
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "stackit-cert-manager-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

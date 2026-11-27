@@ -1,0 +1,13 @@
+Thank you for installing {{ .Chart.Name }} ({{ .Chart.Version }}).
+
+{{- $secretScope := .Values.stackitSaAuthentication.secretAccessScope | default "webhook" }}
+Secret Access Scope: {{ $secretScope }}
+{{- if eq $secretScope "webhook" }}
+- The webhook is configured with namespace-scoped secret access ({{ .Release.Namespace }}).
+- Only ClusterIssuers or Issuers in {{ .Release.Namespace }} can reference dynamic Service Account secrets in {{ .Release.Namespace }}.
+- To allow Issuers in other namespaces to reference secrets in their own namespace, set `stackitSaAuthentication.secretAccessScope=issuer`.
+{{- else if eq $secretScope "issuer" }}
+- The webhook is configured to allow Issuers to reference secrets strictly within their own namespace.
+{{- else if eq $secretScope "none" }}
+- Dynamic Kubernetes Secret lookup and secret-reader RBAC are disabled. Ensure WIF, DefaultAuth environment variables, or mounted Service Account authentication is configured.
+{{- end }}

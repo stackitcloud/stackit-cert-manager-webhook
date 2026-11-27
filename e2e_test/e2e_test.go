@@ -29,7 +29,8 @@ func TestRunsSuite(t *testing.T) {
 	/* The manifest path should contain a file named config.json that is a
 	   snippet of valid configuration that should be included on the
 	   ChallengeRequest passed as part of the test cases.*/
-	t.Parallel()
+	t.Setenv("POD_NAMESPACE", "default")
+	t.Setenv("STACKIT_SECRET_ACCESS_SCOPE", "issuer")
 
 	fqdn = getRandomString(20) + "." + zone
 	if !strings.HasSuffix(fqdn, ".") {

@@ -1,8 +1,13 @@
 package resolver_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
@@ -23,49 +28,61 @@ import (
 var (
 	configJson       = &v1.JSON{Raw: []byte(`{"projectId":"test"}`)}
 	challengeRequest = &v1alpha1.ChallengeRequest{
-		Config: configJson,
+		Config:            configJson,
+		ResourceNamespace: testDefaultNS,
 	}
 )
 
 const (
-	testID    = "test"
-	targetKey = "delete-me"
-	keepKey   = "keep-me"
+	testID        = "test"
+	testSecret    = "secret"
+	testSecretKey = "sa.json"
+	testDefaultNS = "default"
+	targetKey     = "delete-me"
+	keepKey       = "keep-me"
 )
+
+func generateDummyPrivateKey() string {
+	privKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	privKeyPEM := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
+	}
+
+	return string(pem.EncodeToMemory(privKeyPEM))
+}
 
 func TestName(t *testing.T) {
 	t.Parallel()
-
 	r := resolver.NewResolver(nil, zap.NewNop(), nil, nil, nil, nil)
-
 	assert.Equal(t, r.Name(), "stackit")
 }
 
 func TestInitialize(t *testing.T) {
 	t.Parallel()
-
 	r := resolver.NewResolver(nil, zap.NewNop(), nil, nil, nil, nil)
 
 	t.Run("successful init", func(t *testing.T) {
 		t.Parallel()
-
+		stopCh := make(chan struct{})
 		kubeConfig := &rest.Config{}
-		err := r.Initialize(kubeConfig, nil)
+		err := r.Initialize(kubeConfig, stopCh)
+		close(stopCh)
 		assert.NoError(t, err)
 	})
 
 	t.Run("unsuccessful init", func(t *testing.T) {
 		t.Parallel()
-
 		kubeConfig := &rest.Config{Burst: -1, RateLimiter: nil, QPS: 1}
 		err := r.Initialize(kubeConfig, nil)
 		assert.Error(t, err)
 	})
 }
 
-type presentSuite struct {
+type baseResolverSuite struct {
 	suite.Suite
 	ctrl                       *gomock.Controller
+	httpClient                 *http.Client
 	mockSecretFetcher          *resolver_mock.MockSecretFetcher
 	mockConfigProvider         *resolver_mock.MockConfigProvider
 	mockZoneRepositoryFactory  *repository_mock.MockZoneRepositoryFactory
@@ -73,9 +90,10 @@ type presentSuite struct {
 	mockZoneRepository         *repository_mock.MockZoneRepository
 	mockRRSetRepository        *repository_mock.MockRRSetRepository
 	resolver                   webhook.Solver
+	dummySAKeyJSON             string
 }
 
-func (s *presentSuite) SetupTest() {
+func (s *baseResolverSuite) SetupTest() {
 	s.mockSecretFetcher = resolver_mock.NewMockSecretFetcher(s.ctrl)
 	s.mockConfigProvider = resolver_mock.NewMockConfigProvider(s.ctrl)
 	s.mockZoneRepositoryFactory = repository_mock.NewMockZoneRepositoryFactory(s.ctrl)
@@ -83,8 +101,25 @@ func (s *presentSuite) SetupTest() {
 	s.mockZoneRepository = repository_mock.NewMockZoneRepository(s.ctrl)
 	s.mockRRSetRepository = repository_mock.NewMockRRSetRepository(s.ctrl)
 
+	dummyKey := generateDummyPrivateKey()
+	s.dummySAKeyJSON = fmt.Sprintf(`{"id":"00000000-0000-0000-0000-000000000000","credentials":{"privateKey":%q}}`, dummyKey)
+
+	s.T().Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "dummy-token")
+	s.T().Setenv("STACKIT_SERVICE_ACCOUNT_EMAIL", "test@example.com")
+
+	wifFile, err := os.CreateTemp("", "wif-*")
+	s.Require().NoError(err)
+	_, _ = wifFile.Write([]byte("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.sig"))
+	wifFile.Close()
+	s.T().Setenv("STACKIT_FEDERATED_TOKEN_FILE", wifFile.Name())
+	s.T().Cleanup(func() { os.Remove(wifFile.Name()) })
+
+	s.httpClient = &http.Client{
+		Transport: &http.Transport{},
+	}
+
 	s.resolver = resolver.NewResolver(
-		&http.Client{},
+		s.httpClient,
 		zap.NewNop(),
 		s.mockZoneRepositoryFactory,
 		s.mockRRSetRepositoryFactory,
@@ -93,16 +128,18 @@ func (s *presentSuite) SetupTest() {
 	)
 }
 
-func (s *presentSuite) TearDownSuite() {
+func (s *baseResolverSuite) TearDownSuite() {
 	s.ctrl.Finish()
 }
 
-func TestPresentTestSuite(t *testing.T) {
-	t.Parallel()
+type presentSuite struct {
+	baseResolverSuite
+}
 
+//nolint:paralleltest // manipulates global environment variables
+func TestPresentTestSuite(t *testing.T) {
 	pSuite := new(presentSuite)
 	pSuite.ctrl = gomock.NewController(t)
-
 	suite.Run(t, pSuite)
 }
 
@@ -115,10 +152,14 @@ func (s *presentSuite) TestConfigProviderError() {
 	s.Error(err)
 }
 
-func (s *presentSuite) TestFailGetAuthToken() {
+func (s *presentSuite) TestFailFetchServiceAccountKeyFromSecret() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{}, nil)
+		Return(resolver.StackitDnsProviderConfig{
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretNamespace: testDefaultNS,
+		}, nil)
+
 	s.mockSecretFetcher.EXPECT().
 		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return("", fmt.Errorf("error fetching token"))
@@ -132,13 +173,171 @@ func (s *presentSuite) TestFailGetAuthToken() {
 	)
 }
 
+func (s *presentSuite) setupCommonPresentMocks() {
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, repository.ErrRRSetNotFound)
+
+	s.mockRRSetRepository.EXPECT().
+		CreateRRSet(gomock.Any(), gomock.Any()).
+		Return(nil)
+}
+
+func (s *presentSuite) TestAuthMethodSelectionDynamicSA() {
+	origTransport := s.httpClient.Transport
+
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretKey:       testSecretKey,
+			ServiceAccountSecretNamespace: testDefaultNS,
+		}, nil)
+
+	s.mockSecretFetcher.EXPECT().
+		StringFromSecret(testDefaultNS, testSecret, testSecretKey).
+		Return(s.dummySAKeyJSON, nil)
+
+	s.setupCommonPresentMocks()
+
+	err := s.resolver.Present(challengeRequest)
+	s.NoError(err)
+	s.Same(origTransport, s.httpClient.Transport, "shared httpClient.Transport must not be mutated in-place by SDK auth wrapper")
+}
+
+func (s *presentSuite) TestAPIClientReuseAndRotation() {
+	rotatedKey := generateDummyPrivateKey()
+	rotatedSAKeyJSON := fmt.Sprintf(`{"id":"11111111-1111-1111-1111-111111111111","credentials":{"privateKey":%q}}`, rotatedKey)
+
+	cfg := resolver.StackitDnsProviderConfig{
+		ServiceAccountSecretRef:       testSecret,
+		ServiceAccountSecretKey:       testSecretKey,
+		ServiceAccountSecretNamespace: testDefaultNS,
+	}
+
+	var capturedClients []*stackitdnsclient_new.APIClient
+
+	s.mockConfigProvider.EXPECT().LoadConfig(gomock.Any()).Return(cfg, nil).Times(3)
+
+	gomock.InOrder(
+		s.mockSecretFetcher.EXPECT().StringFromSecret(testDefaultNS, testSecret, testSecretKey).Return(s.dummySAKeyJSON, nil),
+		s.mockSecretFetcher.EXPECT().StringFromSecret(testDefaultNS, testSecret, testSecretKey).Return(s.dummySAKeyJSON, nil),
+		s.mockSecretFetcher.EXPECT().StringFromSecret(testDefaultNS, testSecret, testSecretKey).Return(rotatedSAKeyJSON, nil),
+	)
+
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		DoAndReturn(func(c repository.Config) (repository.ZoneRepository, error) {
+			capturedClients = append(capturedClients, c.ApiClient)
+
+			return s.mockZoneRepository, nil
+		}).
+		Times(3)
+
+	s.mockZoneRepository.EXPECT().FetchZone(gomock.Any(), gomock.Any()).Return(&stackitdnsclient_new.Zone{Id: testID}, nil).Times(3)
+	s.mockRRSetRepositoryFactory.EXPECT().NewRRSetRepository(gomock.Any(), gomock.Any()).Return(s.mockRRSetRepository, nil).Times(3)
+	s.mockRRSetRepository.EXPECT().FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, repository.ErrRRSetNotFound).Times(3)
+	s.mockRRSetRepository.EXPECT().CreateRRSet(gomock.Any(), gomock.Any()).Return(nil).Times(3)
+
+	s.Require().NoError(s.resolver.Present(challengeRequest))
+	s.Require().NoError(s.resolver.Present(challengeRequest))
+	s.Require().NoError(s.resolver.Present(challengeRequest))
+
+	s.Require().Len(capturedClients, 3)
+	s.Same(capturedClients[0], capturedClients[1], "identical credentials should reuse cached APIClient")
+	s.NotSame(capturedClients[0], capturedClients[2], "rotated secret credentials should create a new APIClient")
+}
+
+func (s *presentSuite) TestAuthMethodSelectionStaticSA() {
+	f, err := os.CreateTemp("", "sa.json")
+	s.Require().NoError(err)
+	defer os.Remove(f.Name())
+	_, _ = f.Write([]byte(s.dummySAKeyJSON))
+	f.Close()
+
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{
+			ServiceAccountKeyPath: f.Name(),
+		}, nil)
+
+	s.setupCommonPresentMocks()
+
+	err = s.resolver.Present(challengeRequest)
+	s.NoError(err)
+}
+
+func (s *presentSuite) TestAuthMethodSelectionWIF() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{
+			UseWorkloadIdentityFederation: true,
+		}, nil)
+
+	s.setupCommonPresentMocks()
+
+	err := s.resolver.Present(challengeRequest)
+	s.NoError(err)
+}
+
+func (s *presentSuite) TestCrossTenantSecretNamespaceRejectedInIssuerScope() {
+	s.T().Setenv("STACKIT_SECRET_ACCESS_SCOPE", "issuer")
+
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretKey:       testSecretKey,
+			ServiceAccountSecretNamespace: "tenant-b",
+		}, nil)
+
+	req := &v1alpha1.ChallengeRequest{
+		Config:            configJson,
+		ResourceNamespace: "tenant-a",
+	}
+
+	err := s.resolver.Present(req)
+	s.Error(err)
+	s.Contains(err.Error(), "serviceAccountSecretNamespace must match issuer namespace tenant-a, got: tenant-b")
+}
+
+func (s *presentSuite) TestCrossTenantSecretNamespaceRejectedInWebhookScope() {
+	s.T().Setenv("STACKIT_SECRET_ACCESS_SCOPE", "webhook")
+
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretKey:       testSecretKey,
+			ServiceAccountSecretNamespace: "cert-manager",
+		}, nil)
+
+	req := &v1alpha1.ChallengeRequest{
+		Config:            configJson,
+		ResourceNamespace: "tenant-a",
+	}
+
+	err := s.resolver.Present(req)
+	s.Error(err)
+	s.Contains(err.Error(), "serviceAccountSecretNamespace must match issuer namespace tenant-a, got: cert-manager")
+}
+
 func (s *presentSuite) TestFailFetchZone() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -148,20 +347,13 @@ func (s *presentSuite) TestFailFetchZone() {
 
 	err := s.resolver.Present(challengeRequest)
 	s.Error(err)
-	s.Containsf(
-		err.Error(),
-		"error fetching zone",
-		"error message should contain error from zoneRepository",
-	)
+	s.Contains(err.Error(), "error fetching zone")
 }
 
 func (s *presentSuite) TestFailFetchRRSet() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -177,47 +369,13 @@ func (s *presentSuite) TestFailFetchRRSet() {
 
 	err := s.resolver.Present(challengeRequest)
 	s.Error(err)
-	s.Containsf(
-		err.Error(),
-		"error fetching rr set",
-		"error message should contain error from rrSetRepository",
-	)
-}
-
-func (s *presentSuite) TestSuccessCreateRRSet() {
-	s.mockConfigProvider.EXPECT().
-		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
-	s.mockZoneRepositoryFactory.EXPECT().
-		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository, nil)
-	s.mockZoneRepository.EXPECT().
-		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
-	s.mockRRSetRepositoryFactory.EXPECT().
-		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository, nil)
-	s.mockRRSetRepository.EXPECT().
-		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil, repository.ErrRRSetNotFound)
-	s.mockRRSetRepository.EXPECT().
-		CreateRRSet(gomock.Any(), gomock.Any()).
-		Return(nil)
-
-	err := s.resolver.Present(challengeRequest)
-	s.NoError(err)
+	s.Contains(err.Error(), "error fetching rr set")
 }
 
 func (s *presentSuite) TestSuccessUpdateRRSet() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -246,9 +404,6 @@ func (s *presentSuite) TestSuccessPresentIdempotent() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -288,9 +443,6 @@ func (s *presentSuite) TestSuccessPresentAppended() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -340,43 +492,10 @@ func (s *presentSuite) TestSuccessPresentAppended() {
 	s.NoError(err)
 }
 
-func (s *presentSuite) TestPresentRRSetWithEmptyRecords() {
-	s.mockConfigProvider.EXPECT().
-		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
-	s.mockZoneRepositoryFactory.EXPECT().
-		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository, nil)
-	s.mockZoneRepository.EXPECT().
-		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
-	s.mockRRSetRepositoryFactory.EXPECT().
-		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository, nil)
-
-	s.mockRRSetRepository.EXPECT().
-		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.RecordSet{
-			Records: []stackitdnsclient_new.Record{},
-		}, nil)
-	s.mockRRSetRepository.EXPECT().
-		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			return len(rrSet.Records) == 1
-		})).Return(nil)
-	err := s.resolver.Present(challengeRequest)
-	s.NoError(err)
-}
-
 func (s *presentSuite) TestFailCreateRRSet() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -402,9 +521,6 @@ func (s *presentSuite) TestFailUpdateRRSet() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -429,14 +545,10 @@ func (s *presentSuite) TestFailUpdateRRSet() {
 }
 
 func (s *presentSuite) TestTTLPropagation() {
-	ttl := int32(60)
-	// Test Create
+	ttl := int32(600)
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{AcmeTxtRecordTTL: ttl}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil).AnyTimes()
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
@@ -446,7 +558,6 @@ func (s *presentSuite) TestTTLPropagation() {
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
-
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, repository.ErrRRSetNotFound)
@@ -458,109 +569,16 @@ func (s *presentSuite) TestTTLPropagation() {
 
 	err := s.resolver.Present(challengeRequest)
 	s.NoError(err)
-
-	// Test Update
-	s.mockConfigProvider.EXPECT().
-		LoadConfig(gomock.Any()).
-		Return(resolver.StackitDnsProviderConfig{AcmeTxtRecordTTL: ttl}, nil)
-	s.mockZoneRepositoryFactory.EXPECT().
-		NewZoneRepository(gomock.Any()).
-		Return(s.mockZoneRepository, nil)
-	s.mockZoneRepository.EXPECT().
-		FetchZone(gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
-	s.mockRRSetRepositoryFactory.EXPECT().
-		NewRRSetRepository(gomock.Any(), gomock.Any()).
-		Return(s.mockRRSetRepository, nil)
-
-	s.mockRRSetRepository.EXPECT().
-		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&stackitdnsclient_new.RecordSet{
-			Records: []stackitdnsclient_new.Record{},
-		}, nil)
-	s.mockRRSetRepository.EXPECT().
-		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
-			return rrSet.Ttl == ttl
-		})).
-		Return(nil)
-
-	err = s.resolver.Present(challengeRequest)
-	s.NoError(err)
-}
-
-func (s *presentSuite) TestAuthMethodSelection() {
-	// Test Service Account
-	s.Run("Service Account", func() {
-		s.mockConfigProvider.EXPECT().
-			LoadConfig(gomock.Any()).
-			Return(resolver.StackitDnsProviderConfig{
-				ServiceAccountKeyPath: "/path/to/key",
-			}, nil)
-		s.mockZoneRepositoryFactory.EXPECT().
-			NewZoneRepository(matchedBy(func(cfg repository.Config) bool {
-				return cfg.UseSaKey && cfg.SaKeyPath == "/path/to/key"
-			})).
-			Return(s.mockZoneRepository, nil)
-		s.mockZoneRepository.EXPECT().
-			FetchZone(gomock.Any(), gomock.Any()).
-			Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
-		s.mockRRSetRepositoryFactory.EXPECT().
-			NewRRSetRepository(gomock.Any(), gomock.Any()).
-			Return(s.mockRRSetRepository, nil)
-		s.mockRRSetRepository.EXPECT().
-			FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(nil, repository.ErrRRSetNotFound)
-		s.mockRRSetRepository.EXPECT().
-			CreateRRSet(gomock.Any(), gomock.Any()).
-			Return(nil)
-
-		err := s.resolver.Present(challengeRequest)
-		s.NoError(err)
-	})
-
-	// Test Auth Token
-	s.Run("Auth Token", func() {
-		s.mockConfigProvider.EXPECT().
-			LoadConfig(gomock.Any()).
-			Return(resolver.StackitDnsProviderConfig{
-				AuthTokenSecretRef: "secret",
-			}, nil)
-		s.mockSecretFetcher.EXPECT().
-			StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-			Return("token123", nil)
-		s.mockZoneRepositoryFactory.EXPECT().
-			NewZoneRepository(matchedBy(func(cfg repository.Config) bool {
-				return !cfg.UseSaKey && cfg.AuthToken == "token123"
-			})).
-			Return(s.mockZoneRepository, nil)
-		s.mockZoneRepository.EXPECT().
-			FetchZone(gomock.Any(), gomock.Any()).
-			Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
-		s.mockRRSetRepositoryFactory.EXPECT().
-			NewRRSetRepository(gomock.Any(), gomock.Any()).
-			Return(s.mockRRSetRepository, nil)
-		s.mockRRSetRepository.EXPECT().
-			FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(nil, repository.ErrRRSetNotFound)
-		s.mockRRSetRepository.EXPECT().
-			CreateRRSet(gomock.Any(), gomock.Any()).
-			Return(nil)
-
-		err := s.resolver.Present(challengeRequest)
-		s.NoError(err)
-	})
 }
 
 type cleanSuite struct {
-	presentSuite
+	baseResolverSuite
 }
 
+//nolint:paralleltest // manipulates global environment variables
 func TestCleanTestSuite(t *testing.T) {
-	t.Parallel()
-
 	cSuite := new(cleanSuite)
 	cSuite.ctrl = gomock.NewController(t)
-
 	suite.Run(t, cSuite)
 }
 
@@ -568,15 +586,15 @@ func (s *cleanSuite) setupCommonMocks() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{}, nil)
-	s.mockSecretFetcher.EXPECT().
-		StringFromSecret(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return("", nil)
+
 	s.mockZoneRepositoryFactory.EXPECT().
 		NewZoneRepository(gomock.Any()).
 		Return(s.mockZoneRepository, nil)
+
 	s.mockZoneRepository.EXPECT().
 		FetchZone(gomock.Any(), gomock.Any()).
 		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+
 	s.mockRRSetRepositoryFactory.EXPECT().
 		NewRRSetRepository(gomock.Any(), gomock.Any()).
 		Return(s.mockRRSetRepository, nil)
@@ -584,6 +602,7 @@ func (s *cleanSuite) setupCommonMocks() {
 
 func (s *cleanSuite) TestFailFetchRRSet() {
 	s.setupCommonMocks()
+
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, fmt.Errorf("error fetching rr set"))
@@ -599,6 +618,7 @@ func (s *cleanSuite) TestFailFetchRRSet() {
 
 func (s *cleanSuite) TestFailFetchNoRRSet() {
 	s.setupCommonMocks()
+
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, repository.ErrRRSetNotFound)
@@ -626,7 +646,6 @@ func (s *cleanSuite) TestCleanUp_RemovesOnlyKey_DeletesRRSet() {
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&rrset, nil)
 
-	// Because it was the only key, the slice becomes empty, so we expect a DeleteRRSet
 	s.mockRRSetRepository.EXPECT().
 		DeleteRRSet(gomock.Any(), rrset.Id).
 		Return(nil)
@@ -655,11 +674,9 @@ func (s *cleanSuite) TestCleanUp_RemovesOneKey_UpdatesRRSet() {
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&rrset, nil)
 
-	// Because one key remains, we expect an UpdateRRSet, NOT a DeleteRRSet
 	s.mockRRSetRepository.EXPECT().
 		UpdateRRSet(gomock.Any(), matchedBy(func(updated stackitdnsclient_new.RecordSet) bool {
-			return len(updated.Records) == 1 &&
-				updated.Records[0].Content == keepKey
+			return len(updated.Records) == 1 && updated.Records[0].Content == keepKey
 		})).
 		Return(nil)
 
@@ -685,8 +702,6 @@ func (s *cleanSuite) TestCleanUp_KeyNotFound_DoesNothing() {
 	s.mockRRSetRepository.EXPECT().
 		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&rrset, nil)
-
-	// We do NOT expect DeleteRRSet or UpdateRRSet to be called.
 
 	err := s.resolver.CleanUp(req)
 	s.NoError(err)

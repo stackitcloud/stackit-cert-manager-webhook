@@ -36,7 +36,7 @@ func TestStringFromSecret(t *testing.T) {
 	// check for a non-existent key
 	_, err = fetcher.StringFromSecret("test-namespace", "test-secret", "non-existent-key")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "key `\"non-existent-key\"` not found in secretFetcher `test-namespace/test-secret`")
+	assert.Contains(t, err.Error(), "key \"non-existent-key\" not found in secret test-namespace/test-secret")
 
 	// check for a non-existent secret
 	_, err = fetcher.StringFromSecret("test-namespace", "non-existent-secret", "test-key")

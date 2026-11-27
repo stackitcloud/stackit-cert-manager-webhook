@@ -1,13 +1,8 @@
 package repository
 
-import "net/http"
+import stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 
 type Config struct {
-	ApiBasePath           string
-	ServiceAccountBaseUrl string
-	AuthToken             string
-	ProjectId             string
-	HttpClient            *http.Client
-	SaKeyPath             string
-	UseSaKey              bool
+	ProjectId string
+	ApiClient *stackitdnsclient.APIClient
 }

@@ -27,7 +27,7 @@ certManager:
 
 # -- Service Account
 serviceAccount:
-  # -- service account annotations.
+  # -- service account annotations. Add workload-identity annotations here for WIF authentication.
   annotations: {}
 
 # -- Image information for the webhook.
@@ -46,15 +46,17 @@ nameOverride: ""
 # -- Fullname override of the webhook.
 fullnameOverride: ""
 
-# -- Configuration for the stackit service account keys.
+# -- Configuration for STACKIT Service Account authentication and dynamic secret RBAC scope.
 stackitSaAuthentication:
-  # -- enabled flag for the stackit service account keys.
+  # -- enabled flag for mounting the static STACKIT Service Account key JSON.
   enabled: false
-  # -- secret where the service account key is stored. Should be in the same namespace as the webhook since it will be mounted into the pod.
+  # -- secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended), "issuer" to allow issuer-namespace secret lookup, or "none" to disable secret-reader RBAC when using WIF or static SA.
+  secretAccessScope: webhook
+  # -- secret where the static Service Account key JSON is stored. Should be in the same namespace as the webhook since it will be mounted into the pod.
   secretName: stackit-sa-authentication
-  # -- key of the service account key in the secret. Which will be later be used to load in keys in the pod as well.
+  # -- key of the Service Account JSON within the secret.
   fileName: sa.json
-  # -- Path where the secret will be mounted in the pod.
+  # -- Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit
   mountPath: /var/run/secrets/stackit
 
 # -- Configuration for the webhook service.
@@ -68,6 +70,29 @@ service:
 apiService:
   # -- APIService annotations.
   annotations: {}
+
+# -- Configuration for the webhook PKI (CA and serving certificates managed by cert-manager).
+pki:
+  # -- Configuration for the self-signed root CA certificate.
+  caCertificate:
+    # -- Duration of the root CA certificate.
+    duration: 43800h0m0s
+    # -- How long before expiry the root CA certificate should be renewed.
+    renewBefore: 720h0m0s
+    # -- Private key configuration for the root CA certificate.
+    privateKey:
+      # -- Rotation policy of the private key when the certificate is re-issued (`Always` or `Never`).
+      rotationPolicy: Always
+  # -- Configuration for the webhook serving certificate.
+  servingCertificate:
+    # -- Duration of the webhook serving certificate.
+    duration: 8760h0m0s
+    # -- How long before expiry the webhook serving certificate should be renewed.
+    renewBefore: 720h0m0s
+    # -- Private key configuration for the webhook serving certificate.
+    privateKey:
+      # -- Rotation policy of the private key when the certificate is re-issued (`Always` or `Never`).
+      rotationPolicy: Always
 
 # -- Kubernetes resources for the webhook. Usually limits.cpu=100m, limits.memory=128Mi, requests.cpu=100m, requests.memory=128Mi is enough for the webhook.
 resources:

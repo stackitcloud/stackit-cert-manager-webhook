@@ -26,7 +26,7 @@ func (k *kubeSecretFetcher) StringFromSecret(namespace, secretName, key string) 
 
 	binary, ok := secret.Data[key]
 	if !ok {
-		return "", fmt.Errorf("key `%q` not found in secretFetcher `%s/%s`",
+		return "", fmt.Errorf("key %q not found in secret %s/%s",
 			key, namespace, secretName)
 	}
 

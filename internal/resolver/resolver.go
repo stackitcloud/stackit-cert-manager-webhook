@@ -2,25 +2,30 @@ package resolver
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/stackitcloud/stackit-cert-manager-webhook/internal/repository"
+	stackitconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-const typeTxtRecord = "TXT"
-
-var stackitAuthToken = os.Getenv("STACKIT_AUTH_TOKEN")
+const (
+	typeTxtRecord    = "TXT"
+	maxCachedClients = 64
+)
 
 func NewResolver(
 	httpClient *http.Client,
@@ -38,6 +43,7 @@ func NewResolver(
 		zoneRepositoryFactory:  zoneRepositoryFactory,
 		rrSetRepositoryFactory: rrSetRepositoryFactory,
 		logger:                 logger,
+		apiClients:             make(map[string]*stackitdnsclient.APIClient),
 	}
 }
 
@@ -49,6 +55,8 @@ type stackitDnsProviderResolver struct {
 	zoneRepositoryFactory  repository.ZoneRepositoryFactory
 	rrSetRepositoryFactory repository.RRSetRepositoryFactory
 	logger                 *zap.Logger
+	clientMu               sync.RWMutex
+	apiClients             map[string]*stackitdnsclient.APIClient
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -123,6 +131,16 @@ func (s *stackitDnsProviderResolver) Initialize(
 		return err
 	}
 
+	if stopCh != nil {
+		ctx, cancel := context.WithCancel(s.ctx)
+		s.ctx = ctx
+
+		go func() {
+			<-stopCh
+			cancel()
+		}()
+	}
+
 	s.secretFetcher = &kubeSecretFetcher{
 		client: cl,
 		ctx:    s.ctx,
@@ -138,6 +156,10 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 ) (*initResolverContextResult, error) {
 	cfg, err := s.configProvider.LoadConfig(ch.Config)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := validateResourceNamespace(&cfg, ch.ResourceNamespace, getSecretAccessScope()); err != nil {
 		return nil, err
 	}
 
@@ -184,90 +206,151 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 }
 
 func (s *stackitDnsProviderResolver) createRRSet(
-	initResolverRes *initResolverContextResult, key string,
+	initResolverRes *initResolverContextResult,
+	key string,
 ) error {
 	rrSet := stackitdnsclient.RecordSet{
 		Comment: new("This record set is managed by stackit-cert-manager-webhook"),
 		Name:    initResolverRes.rrSetName,
 		Records: []stackitdnsclient.Record{
-			{
-				Content: key,
-			},
+			{Content: key},
 		},
 		Ttl:  initResolverRes.acmeTxtDefaultTTL,
 		Type: typeTxtRecord,
 	}
 
-	s.logger.Info("Creating RRSet", zap.String("rrSet", fmt.Sprintf("%+v", rrSet)))
+	s.logger.Info(
+		"Creating RRSet",
+		zap.String("rrSetName", rrSet.Name),
+		zap.String("type", string(rrSet.Type)),
+		zap.Int32("ttl", rrSet.Ttl),
+	)
 
 	return initResolverRes.rrSetRepository.CreateRRSet(s.ctx, rrSet)
-}
-
-// getAuthToken from Kubernetes secretFetcher.
-func (s *stackitDnsProviderResolver) getAuthToken(cfg *StackitDnsProviderConfig) (string, error) {
-	if stackitAuthToken != "" {
-		return stackitAuthToken, nil
-	}
-
-	token, err := s.secretFetcher.StringFromSecret(
-		cfg.AuthTokenSecretNamespace,
-		cfg.AuthTokenSecretRef,
-		cfg.AuthTokenSecretKey,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
-}
-
-// geSaKeyPath gets the Service Account Key Path from the environment.
-func (s *stackitDnsProviderResolver) getSaKeyPath(cfg *StackitDnsProviderConfig) string {
-	if cfg.ServiceAccountKeyPath != "" {
-		return cfg.ServiceAccountKeyPath
-	}
-
-	return os.Getenv("STACKIT_SERVICE_ACCOUNT_KEY_PATH")
-}
-
-func (s *stackitDnsProviderResolver) checkUseSaAuthentication(cfg *StackitDnsProviderConfig) bool {
-	return s.getSaKeyPath(cfg) != ""
 }
 
 func (s *stackitDnsProviderResolver) getRepositoryConfig(
 	cfg *StackitDnsProviderConfig,
 ) (repository.Config, error) {
-	config := repository.Config{
-		ApiBasePath:           cfg.ApiBasePath,
-		ProjectId:             cfg.ProjectId,
-		HttpClient:            s.httpClient,
-		UseSaKey:              false,
-		ServiceAccountBaseUrl: cfg.ServiceAccountBaseUrl,
+	authType, err := determineAuthType(cfg)
+	if err != nil {
+		return repository.Config{}, err
 	}
 
-	switch {
-	case s.checkUseSaAuthentication(cfg):
-		config.SaKeyPath = s.getSaKeyPath(cfg)
-		config.UseSaKey = true
-		s.logger.Info(
-			"Using service account key for authentication",
-			zap.String("saKeyPath", config.SaKeyPath),
-			zap.String("serviceAccountBaseUrl", config.ServiceAccountBaseUrl),
+	var saKeyJSON string
+	if authType == AuthTypeDynamicSA {
+		saKeyJSON, err = s.secretFetcher.StringFromSecret(
+			cfg.ServiceAccountSecretNamespace,
+			cfg.ServiceAccountSecretRef,
+			cfg.ServiceAccountSecretKey,
 		)
-	default:
-		authToken, err := s.getAuthToken(cfg)
 		if err != nil {
-			return repository.Config{}, err
+			return repository.Config{}, fmt.Errorf("failed to fetch service account key from secret: %w", err)
 		}
-		config.AuthToken = authToken
-		s.logger.Info("Using auth token for authentication")
 	}
 
-	return config, nil
+	tokenBaseURL := strings.TrimSpace(os.Getenv("STACKIT_SERVICE_ACCOUNT_BASE_URL"))
+	cacheKey := buildClientCacheKey(cfg.ApiBasePath, tokenBaseURL, authType, cfg.ServiceAccountKeyPath, saKeyJSON)
+
+	if cachedClient := s.getCachedAPIClient(cacheKey); cachedClient != nil {
+		return repository.Config{
+			ProjectId: cfg.ProjectId,
+			ApiClient: cachedClient,
+		}, nil
+	}
+
+	apiClient, err := s.createAPIClient(cfg, authType, tokenBaseURL, saKeyJSON)
+	if err != nil {
+		return repository.Config{}, err
+	}
+
+	s.cacheAPIClient(cacheKey, apiClient)
+
+	return repository.Config{
+		ProjectId: cfg.ProjectId,
+		ApiClient: apiClient,
+	}, nil
+}
+
+func (s *stackitDnsProviderResolver) createAPIClient(
+	cfg *StackitDnsProviderConfig,
+	authType AuthType,
+	tokenBaseURL, saKeyJSON string,
+) (*stackitdnsclient.APIClient, error) {
+	options := []stackitconfig.ConfigurationOption{
+		stackitconfig.WithHTTPClient(s.cloneHTTPClient()),
+		stackitconfig.WithEndpoint(cfg.ApiBasePath),
+	}
+
+	if len(tokenBaseURL) > 0 {
+		options = append(options, stackitconfig.WithTokenEndpoint(tokenBaseURL))
+	}
+
+	switch authType {
+	case AuthTypeDynamicSA:
+		options = append(options, stackitconfig.WithServiceAccountKey(saKeyJSON))
+		s.logger.Info("Using dynamic service account key from secret for authentication")
+	case AuthTypeStaticSA:
+		options = append(options, stackitconfig.WithServiceAccountKeyPath(cfg.ServiceAccountKeyPath))
+		s.logger.Info("Using static service account key path for authentication", zap.String("saKeyPath", cfg.ServiceAccountKeyPath))
+	case AuthTypeWIF:
+		options = append(options, stackitconfig.WithWorkloadIdentityFederationAuth())
+		s.logger.Info("Using workload identity federation for authentication")
+	case AuthTypeDefault:
+		s.logger.Info("Using default SDK authentication flow")
+	}
+
+	apiClient, err := stackitdnsclient.NewAPIClient(options...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create STACKIT API client: %w", err)
+	}
+
+	return apiClient, nil
+}
+
+func buildClientCacheKey(apiBasePath, tokenBaseURL string, authType AuthType, saKeyPath, saKeyJSON string) string {
+	var credentialFingerprint string
+	if len(saKeyJSON) > 0 {
+		sum := sha256.Sum256([]byte(saKeyJSON))
+		credentialFingerprint = hex.EncodeToString(sum[:])
+	}
+
+	return fmt.Sprintf("%d|%s|%s|%s|%s", authType, apiBasePath, tokenBaseURL, saKeyPath, credentialFingerprint)
+}
+
+func (s *stackitDnsProviderResolver) getCachedAPIClient(cacheKey string) *stackitdnsclient.APIClient {
+	s.clientMu.RLock()
+	defer s.clientMu.RUnlock()
+
+	if s.apiClients == nil {
+		return nil
+	}
+
+	return s.apiClients[cacheKey]
+}
+
+func (s *stackitDnsProviderResolver) cacheAPIClient(cacheKey string, apiClient *stackitdnsclient.APIClient) {
+	s.clientMu.Lock()
+	defer s.clientMu.Unlock()
+
+	if s.apiClients == nil || len(s.apiClients) >= maxCachedClients {
+		s.apiClients = make(map[string]*stackitdnsclient.APIClient)
+	}
+
+	s.apiClients[cacheKey] = apiClient
+}
+
+func (s *stackitDnsProviderResolver) cloneHTTPClient() *http.Client {
+	if s.httpClient == nil {
+		return nil
+	}
+
+	cloned := *s.httpClient
+
+	return &cloned
 }
 
 func getZoneDnsNameAndRRSetName(ch *v1alpha1.ChallengeRequest) (string, string) {
-	// Remove trailing . from domain
 	domain := strings.TrimSuffix(ch.ResolvedZone, ".")
 
 	return domain, ch.ResolvedFQDN

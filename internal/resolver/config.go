@@ -83,7 +83,7 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 	cfg := StackitDnsProviderConfig{}
 
 	if cfgJSON == nil {
-		return cfg, fmt.Errorf("no configProvider provided")
+		return cfg, fmt.Errorf("no solver config provided")
 	}
 
 	if err := unmarshalConfig(cfgJSON, &cfg); err != nil {
@@ -198,12 +198,12 @@ func validateResourceNamespace(cfg *StackitDnsProviderConfig, resourceNamespace,
 
 func unmarshalConfig(cfgJSON *extapi.JSON, cfg *StackitDnsProviderConfig) error {
 	if err := json.Unmarshal(cfgJSON.Raw, cfg); err != nil {
-		return fmt.Errorf("error decoding solver configProvider: %w", err)
+		return fmt.Errorf("error decoding solver config: %w", err)
 	}
 
 	var removed removedSolverFields
 	if err := json.Unmarshal(cfgJSON.Raw, &removed); err != nil {
-		return fmt.Errorf("error decoding solver configProvider: %w", err)
+		return fmt.Errorf("error decoding solver config: %w", err)
 	}
 
 	return validateRemovedFields(&removed)

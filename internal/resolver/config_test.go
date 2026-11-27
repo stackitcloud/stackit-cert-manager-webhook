@@ -46,7 +46,7 @@ func TestLoadConfig(t *testing.T) {
 
 		cfg, err := d.LoadConfig(nil)
 		require.Error(t, err)
-		require.Equal(t, "no configProvider provided", err.Error())
+		require.Equal(t, "no solver config provided", err.Error())
 		require.Equal(t, StackitDnsProviderConfig{}, cfg)
 	})
 
@@ -69,7 +69,7 @@ func TestLoadConfig(t *testing.T) {
 		rawCfg := &v1.JSON{Raw: []byte(`{"projectId":}`)}
 		cfg, err := d.LoadConfig(rawCfg)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "error decoding solver configProvider")
+		require.Contains(t, err.Error(), "error decoding solver config")
 		require.Equal(t, StackitDnsProviderConfig{}, cfg)
 	})
 

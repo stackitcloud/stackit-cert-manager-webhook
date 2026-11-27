@@ -9,10 +9,7 @@ import (
 	stackitdnsclient "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 )
 
-var (
-	ErrRRSetNotFound = fmt.Errorf("rrset not found")
-	ErrEmptyRRSet    = fmt.Errorf("empty rrset")
-)
+var ErrRRSetNotFound = fmt.Errorf("rrset not found")
 
 //go:generate mockgen -destination=./mock/rrset_repository.go -source=./rrset_repository.go RRSetRepository
 type RRSetRepository interface {

@@ -219,7 +219,12 @@ func (s *stackitDnsProviderResolver) createRRSet(
 		Type: typeTxtRecord,
 	}
 
-	s.logger.Info("Creating RRSet", zap.String("rrSet", fmt.Sprintf("%+v", rrSet)))
+	s.logger.Info(
+		"Creating RRSet",
+		zap.String("rrSetName", rrSet.Name),
+		zap.String("type", string(rrSet.Type)),
+		zap.Int32("ttl", rrSet.Ttl),
+	)
 
 	return initResolverRes.rrSetRepository.CreateRRSet(s.ctx, rrSet)
 }

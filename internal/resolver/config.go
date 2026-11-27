@@ -104,13 +104,28 @@ func (d defaultConfigProvider) LoadConfig(cfgJSON *extapi.JSON) (StackitDnsProvi
 }
 
 func (d defaultConfigProvider) resolveNamespace(cfg *StackitDnsProviderConfig) error {
+	scope := d.secretAccessScope
+	if err := validateAccessScope(scope); err != nil {
+		return err
+	}
+
+	switch scope {
+	case secretAccessScopeNone:
+		if cfg.ServiceAccountSecretRef != "" {
+			return fmt.Errorf("dynamic secret lookup is disabled when secretAccessScope=none")
+		}
+
+		return nil
+	case secretAccessScopeIssuer:
+		return nil
+	}
+
 	webhookNamespace, err := determineNamespace(d.fileNamespaceName)
 	if err != nil {
 		return err
 	}
 
-	scope := d.secretAccessScope
-	if (scope == "" || scope == secretAccessScopeWebhook) && cfg.ServiceAccountSecretNamespace == "" {
+	if cfg.ServiceAccountSecretNamespace == "" {
 		cfg.ServiceAccountSecretNamespace = webhookNamespace
 	}
 
@@ -123,7 +138,20 @@ func (d defaultConfigProvider) resolveNamespace(cfg *StackitDnsProviderConfig) e
 	return nil
 }
 
+func validateAccessScope(accessScope string) error {
+	switch accessScope {
+	case "", secretAccessScopeWebhook, secretAccessScopeIssuer, secretAccessScopeNone:
+		return nil
+	default:
+		return fmt.Errorf("invalid secretAccessScope %q", accessScope)
+	}
+}
+
 func validateSecretNamespace(configuredNamespace, webhookNamespace, accessScope string) error {
+	if err := validateAccessScope(accessScope); err != nil {
+		return err
+	}
+
 	switch accessScope {
 	case "", secretAccessScopeWebhook:
 		if configuredNamespace != webhookNamespace {
@@ -141,17 +169,16 @@ func validateSecretNamespace(configuredNamespace, webhookNamespace, accessScope 
 }
 
 func validateResourceNamespace(cfg *StackitDnsProviderConfig, resourceNamespace, accessScope string) error {
+	if err := validateAccessScope(accessScope); err != nil {
+		return err
+	}
+
 	if cfg.ServiceAccountSecretRef == "" {
 		return nil
 	}
 
-	switch accessScope {
-	case "", secretAccessScopeWebhook, secretAccessScopeIssuer:
-		// Valid scopes for dynamic secret lookup; namespace match is enforced below.
-	case secretAccessScopeNone:
+	if accessScope == secretAccessScopeNone {
 		return fmt.Errorf("dynamic secret lookup is disabled when secretAccessScope=none")
-	default:
-		return fmt.Errorf("invalid secretAccessScope %q", accessScope)
 	}
 
 	if resourceNamespace == "" {

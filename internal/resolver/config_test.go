@@ -223,6 +223,33 @@ func TestSecretAccessScopeValidation(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid secretAccessScope")
 	})
+
+	t.Run("invalid secretAccessScope rejected even without serviceAccountSecretRef", func(t *testing.T) {
+		t.Parallel()
+		d := defaultConfigProvider{
+			secretAccessScope: "invalid-scope",
+		}
+
+		rawCfg := &v1.JSON{Raw: []byte(`{"projectId":"test"}`)}
+		_, err := d.LoadConfig(rawCfg)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid secretAccessScope")
+	})
+
+	t.Run("none and issuer scopes do not require pod namespace file", func(t *testing.T) {
+		t.Parallel()
+		for _, scope := range []string{secretAccessScopeNone, secretAccessScopeIssuer} {
+			d := defaultConfigProvider{
+				fileNamespaceName: "/nonexistent/namespace/file",
+				secretAccessScope: scope,
+			}
+
+			rawCfg := &v1.JSON{Raw: []byte(`{"projectId":"test"}`)}
+			cfg, err := d.LoadConfig(rawCfg)
+			require.NoError(t, err)
+			require.Equal(t, testProjectID, cfg.ProjectId)
+		}
+	})
 }
 
 func TestValidateResourceNamespace(t *testing.T) {

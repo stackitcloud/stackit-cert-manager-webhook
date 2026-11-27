@@ -30,6 +30,8 @@ By default, the Helm chart does **not** grant cluster-wide Kubernetes `Secret` r
 | `issuer` | `ClusterRole` (`get` on `secrets`) | `Issuer`s may **only** read Secrets in their own namespace (`serviceAccountSecretNamespace` must match the `Issuer` namespace) | Multi-tenant clusters where each namespace manages its own STACKIT project Secret |
 | `none` | None (no `secret-reader` Role/ClusterRole) | Disabled (any `serviceAccountSecretRef` is rejected) | WIF, `DefaultAuth` environment variables, or mounted static Service Account key |
 
+*(Note: When using `secretAccessScope=webhook` with a `ClusterIssuer`, the webhook must be installed in the same namespace as `cert-manager`'s `--cluster-resource-namespace`, which defaults to `cert-manager`.)*
+
 ## Authentication & Usage
 
 The STACKIT webhook requires authentication against the STACKIT DNS API. Depending on your cluster architecture and security policies, configure one of the methods below.
@@ -233,8 +235,7 @@ If your cluster supports Workload Identity Federation (e.g., SKE clusters), you 
 5. **Strict validation on `apiBasePath` and `serviceAccountKeyPath`:**
    - `apiBasePath` only accepts official STACKIT DNS endpoints (`https://dns.api.stackit.cloud` or `https://dns.api.<region>.stackit.cloud`).
    - `serviceAccountKeyPath` must be under `/var/run/secrets/stackit/`.
-6. **Obsolete `useSaKey` flag removed & default `acmeTxtRecordTTL` lowered:**
-   - `useSaKey` is no longer needed (authentication mode is inferred automatically).
+6. **Default `acmeTxtRecordTTL` lowered:**
    - Default `acmeTxtRecordTTL` changed from `600` to `60` seconds (introduced in `v0.5.0`).
 
 ### Before & After Migration Examples

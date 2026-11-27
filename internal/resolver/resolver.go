@@ -224,7 +224,7 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 	}
 
 	options := []stackitconfig.ConfigurationOption{
-		stackitconfig.WithHTTPClient(s.httpClient),
+		stackitconfig.WithHTTPClient(s.cloneHTTPClient()),
 		stackitconfig.WithEndpoint(cfg.ApiBasePath),
 	}
 
@@ -263,6 +263,16 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 		ProjectId: cfg.ProjectId,
 		ApiClient: apiClient,
 	}, nil
+}
+
+func (s *stackitDnsProviderResolver) cloneHTTPClient() *http.Client {
+	if s.httpClient == nil {
+		return nil
+	}
+
+	cloned := *s.httpClient
+
+	return &cloned
 }
 
 func getZoneDnsNameAndRRSetName(ch *v1alpha1.ChallengeRequest) (string, string) {

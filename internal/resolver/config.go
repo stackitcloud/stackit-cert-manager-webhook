@@ -212,10 +212,10 @@ func validateConfig(cfg *StackitDnsProviderConfig) error {
 	return nil
 }
 
-func validateApiBasePath(apiBasePath string) error {
-	pattern := "^https://dns\\.api(?:\\.[a-z0-9-]+)?\\.stackit\\.cloud/?$"
+var apiBasePathRegex = regexp.MustCompile(`^https://dns\.api(?:\.[a-z0-9-]+)?\.stackit\.cloud/?$`)
 
-	if matched, err := regexp.MatchString(pattern, apiBasePath); err == nil && matched {
+func validateApiBasePath(apiBasePath string) error {
+	if apiBasePathRegex.MatchString(apiBasePath) {
 		return nil
 	}
 

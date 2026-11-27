@@ -82,6 +82,7 @@ func TestInitialize(t *testing.T) {
 type baseResolverSuite struct {
 	suite.Suite
 	ctrl                       *gomock.Controller
+	httpClient                 *http.Client
 	mockSecretFetcher          *resolver_mock.MockSecretFetcher
 	mockConfigProvider         *resolver_mock.MockConfigProvider
 	mockZoneRepositoryFactory  *repository_mock.MockZoneRepositoryFactory
@@ -113,8 +114,12 @@ func (s *baseResolverSuite) SetupTest() {
 	s.T().Setenv("STACKIT_FEDERATED_TOKEN_FILE", wifFile.Name())
 	s.T().Cleanup(func() { os.Remove(wifFile.Name()) })
 
+	s.httpClient = &http.Client{
+		Transport: &http.Transport{},
+	}
+
 	s.resolver = resolver.NewResolver(
-		&http.Client{},
+		s.httpClient,
 		zap.NewNop(),
 		s.mockZoneRepositoryFactory,
 		s.mockRRSetRepositoryFactory,
@@ -191,6 +196,8 @@ func (s *presentSuite) setupCommonPresentMocks() {
 }
 
 func (s *presentSuite) TestAuthMethodSelectionDynamicSA() {
+	origTransport := s.httpClient.Transport
+
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{
@@ -207,6 +214,7 @@ func (s *presentSuite) TestAuthMethodSelectionDynamicSA() {
 
 	err := s.resolver.Present(challengeRequest)
 	s.NoError(err)
+	s.Same(origTransport, s.httpClient.Transport, "shared httpClient.Transport must not be mutated in-place by SDK auth wrapper")
 }
 
 func (s *presentSuite) TestAuthMethodSelectionStaticSA() {

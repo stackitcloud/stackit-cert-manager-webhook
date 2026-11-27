@@ -259,6 +259,24 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 		}, nil
 	}
 
+	apiClient, err := s.createAPIClient(cfg, authType, tokenBaseURL, saKeyJSON)
+	if err != nil {
+		return repository.Config{}, err
+	}
+
+	s.cacheAPIClient(cacheKey, apiClient)
+
+	return repository.Config{
+		ProjectId: cfg.ProjectId,
+		ApiClient: apiClient,
+	}, nil
+}
+
+func (s *stackitDnsProviderResolver) createAPIClient(
+	cfg *StackitDnsProviderConfig,
+	authType AuthType,
+	tokenBaseURL, saKeyJSON string,
+) (*stackitdnsclient.APIClient, error) {
 	options := []stackitconfig.ConfigurationOption{
 		stackitconfig.WithHTTPClient(s.cloneHTTPClient()),
 		stackitconfig.WithEndpoint(cfg.ApiBasePath),
@@ -284,15 +302,10 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 
 	apiClient, err := stackitdnsclient.NewAPIClient(options...)
 	if err != nil {
-		return repository.Config{}, fmt.Errorf("failed to create STACKIT API client: %w", err)
+		return nil, fmt.Errorf("failed to create STACKIT API client: %w", err)
 	}
 
-	s.cacheAPIClient(cacheKey, apiClient)
-
-	return repository.Config{
-		ProjectId: cfg.ProjectId,
-		ApiClient: apiClient,
-	}, nil
+	return apiClient, nil
 }
 
 func buildClientCacheKey(apiBasePath, tokenBaseURL string, authType AuthType, saKeyPath, saKeyJSON string) string {

@@ -223,6 +223,10 @@ func TestSecretAccessScopeValidation(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid secretAccessScope")
 	})
+}
+
+func TestSecretAccessScopeWithoutSecretRef(t *testing.T) {
+	t.Parallel()
 
 	t.Run("invalid secretAccessScope rejected even without serviceAccountSecretRef", func(t *testing.T) {
 		t.Parallel()

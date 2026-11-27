@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 
@@ -121,6 +122,16 @@ func (s *stackitDnsProviderResolver) Initialize(
 		return err
 	}
 
+	if stopCh != nil {
+		ctx, cancel := context.WithCancel(s.ctx)
+		s.ctx = ctx
+
+		go func() {
+			<-stopCh
+			cancel()
+		}()
+	}
+
 	s.secretFetcher = &kubeSecretFetcher{
 		client: cl,
 		ctx:    s.ctx,
@@ -136,6 +147,10 @@ func (s *stackitDnsProviderResolver) initializeResolverContext(
 ) (*initResolverContextResult, error) {
 	cfg, err := s.configProvider.LoadConfig(ch.Config)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := validateResourceNamespace(&cfg, ch.ResourceNamespace, getSecretAccessScope()); err != nil {
 		return nil, err
 	}
 
@@ -213,8 +228,8 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 		stackitconfig.WithEndpoint(cfg.ApiBasePath),
 	}
 
-	if len(cfg.ServiceAccountBaseUrl) > 0 {
-		options = append(options, stackitconfig.WithTokenEndpoint(cfg.ServiceAccountBaseUrl))
+	if tokenBaseURL := strings.TrimSpace(os.Getenv("STACKIT_SERVICE_ACCOUNT_BASE_URL")); len(tokenBaseURL) > 0 {
+		options = append(options, stackitconfig.WithTokenEndpoint(tokenBaseURL))
 	}
 
 	switch authType {

@@ -28,14 +28,18 @@ import (
 var (
 	configJson       = &v1.JSON{Raw: []byte(`{"projectId":"test"}`)}
 	challengeRequest = &v1alpha1.ChallengeRequest{
-		Config: configJson,
+		Config:            configJson,
+		ResourceNamespace: testDefaultNS,
 	}
 )
 
 const (
-	testID    = "test"
-	targetKey = "delete-me"
-	keepKey   = "keep-me"
+	testID        = "test"
+	testSecret    = "secret"
+	testSecretKey = "sa.json"
+	testDefaultNS = "default"
+	targetKey     = "delete-me"
+	keepKey       = "keep-me"
 )
 
 func generateDummyPrivateKey() string {
@@ -60,8 +64,10 @@ func TestInitialize(t *testing.T) {
 
 	t.Run("successful init", func(t *testing.T) {
 		t.Parallel()
+		stopCh := make(chan struct{})
 		kubeConfig := &rest.Config{}
-		err := r.Initialize(kubeConfig, nil)
+		err := r.Initialize(kubeConfig, stopCh)
+		close(stopCh)
 		assert.NoError(t, err)
 	})
 
@@ -145,7 +151,8 @@ func (s *presentSuite) TestFailFetchServiceAccountKeyFromSecret() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{
-			ServiceAccountSecretRef: "secret",
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretNamespace: testDefaultNS,
 		}, nil)
 
 	s.mockSecretFetcher.EXPECT().
@@ -187,13 +194,13 @@ func (s *presentSuite) TestAuthMethodSelectionDynamicSA() {
 	s.mockConfigProvider.EXPECT().
 		LoadConfig(gomock.Any()).
 		Return(resolver.StackitDnsProviderConfig{
-			ServiceAccountSecretRef:       "secret",
-			ServiceAccountSecretKey:       "sa.json",
-			ServiceAccountSecretNamespace: "default",
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretKey:       testSecretKey,
+			ServiceAccountSecretNamespace: testDefaultNS,
 		}, nil)
 
 	s.mockSecretFetcher.EXPECT().
-		StringFromSecret("default", "secret", "sa.json").
+		StringFromSecret(testDefaultNS, testSecret, testSecretKey).
 		Return(s.dummySAKeyJSON, nil)
 
 	s.setupCommonPresentMocks()
@@ -229,6 +236,285 @@ func (s *presentSuite) TestAuthMethodSelectionWIF() {
 		}, nil)
 
 	s.setupCommonPresentMocks()
+
+	err := s.resolver.Present(challengeRequest)
+	s.NoError(err)
+}
+
+func (s *presentSuite) TestCrossTenantSecretNamespaceRejectedInIssuerScope() {
+	s.T().Setenv("STACKIT_SECRET_ACCESS_SCOPE", "issuer")
+
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretKey:       testSecretKey,
+			ServiceAccountSecretNamespace: "tenant-b",
+		}, nil)
+
+	req := &v1alpha1.ChallengeRequest{
+		Config:            configJson,
+		ResourceNamespace: "tenant-a",
+	}
+
+	err := s.resolver.Present(req)
+	s.Error(err)
+	s.Contains(err.Error(), "serviceAccountSecretNamespace must match issuer namespace tenant-a, got: tenant-b")
+}
+
+func (s *presentSuite) TestCrossTenantSecretNamespaceRejectedInWebhookScope() {
+	s.T().Setenv("STACKIT_SECRET_ACCESS_SCOPE", "webhook")
+
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{
+			ServiceAccountSecretRef:       testSecret,
+			ServiceAccountSecretKey:       testSecretKey,
+			ServiceAccountSecretNamespace: "cert-manager",
+		}, nil)
+
+	req := &v1alpha1.ChallengeRequest{
+		Config:            configJson,
+		ResourceNamespace: "tenant-a",
+	}
+
+	err := s.resolver.Present(req)
+	s.Error(err)
+	s.Contains(err.Error(), "serviceAccountSecretNamespace must match issuer namespace tenant-a, got: cert-manager")
+}
+
+func (s *presentSuite) TestFailFetchZone() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(nil, fmt.Errorf("error fetching zone"))
+
+	err := s.resolver.Present(challengeRequest)
+	s.Error(err)
+	s.Contains(err.Error(), "error fetching zone")
+}
+
+func (s *presentSuite) TestFailFetchRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, fmt.Errorf("error fetching rr set"))
+
+	err := s.resolver.Present(challengeRequest)
+	s.Error(err)
+	s.Contains(err.Error(), "error fetching rr set")
+}
+
+func (s *presentSuite) TestSuccessUpdateRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.RecordSet{
+			Records: []stackitdnsclient_new.Record{},
+		}, nil)
+	s.mockRRSetRepository.EXPECT().
+		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
+			return len(rrSet.Records) == 1
+		})).
+		Return(nil)
+
+	err := s.resolver.Present(challengeRequest)
+	s.NoError(err)
+}
+
+func (s *presentSuite) TestSuccessPresentIdempotent() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+
+	challengeKey := "challenge-key"
+	req := &v1alpha1.ChallengeRequest{
+		Config: configJson,
+		Key:    challengeKey,
+	}
+
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.RecordSet{
+			Records: []stackitdnsclient_new.Record{
+				{Content: challengeKey},
+			},
+		}, nil)
+
+	s.mockRRSetRepository.EXPECT().
+		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
+			return len(rrSet.Records) == 1 && rrSet.Records[0].Content == challengeKey
+		})).
+		Return(nil)
+
+	err := s.resolver.Present(req)
+	s.NoError(err)
+}
+
+//nolint:gocognit // this is a test
+func (s *presentSuite) TestSuccessPresentAppended() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+
+	existingKey := "existing-key"
+	newKey := "new-key"
+	req := &v1alpha1.ChallengeRequest{
+		Config: configJson,
+		Key:    newKey,
+	}
+
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.RecordSet{
+			Records: []stackitdnsclient_new.Record{
+				{Content: existingKey},
+			},
+		}, nil)
+
+	s.mockRRSetRepository.EXPECT().
+		UpdateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
+			if len(rrSet.Records) != 2 {
+				return false
+			}
+			foundExisting := false
+			foundNew := false
+			for _, r := range rrSet.Records {
+				if r.Content == existingKey {
+					foundExisting = true
+				}
+				if r.Content == newKey {
+					foundNew = true
+				}
+			}
+
+			return foundExisting && foundNew
+		})).
+		Return(nil)
+
+	err := s.resolver.Present(req)
+	s.NoError(err)
+}
+
+func (s *presentSuite) TestFailCreateRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, repository.ErrRRSetNotFound)
+	s.mockRRSetRepository.EXPECT().
+		CreateRRSet(gomock.Any(), gomock.Any()).
+		Return(fmt.Errorf("error creating rr set"))
+
+	err := s.resolver.Present(challengeRequest)
+	s.Error(err)
+	s.Contains(err.Error(), "error creating rr set")
+}
+
+func (s *presentSuite) TestFailUpdateRRSet() {
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.RecordSet{
+			Records: []stackitdnsclient_new.Record{},
+		}, nil)
+	s.mockRRSetRepository.EXPECT().
+		UpdateRRSet(gomock.Any(), gomock.Any()).
+		Return(fmt.Errorf("error updating rr set"))
+
+	err := s.resolver.Present(challengeRequest)
+	s.Error(err)
+	s.Contains(err.Error(), "error updating rr set")
+}
+
+func (s *presentSuite) TestTTLPropagation() {
+	ttl := int32(600)
+	s.mockConfigProvider.EXPECT().
+		LoadConfig(gomock.Any()).
+		Return(resolver.StackitDnsProviderConfig{AcmeTxtRecordTTL: ttl}, nil)
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		Return(s.mockZoneRepository, nil)
+	s.mockZoneRepository.EXPECT().
+		FetchZone(gomock.Any(), gomock.Any()).
+		Return(&stackitdnsclient_new.Zone{Id: testID}, nil)
+	s.mockRRSetRepositoryFactory.EXPECT().
+		NewRRSetRepository(gomock.Any(), gomock.Any()).
+		Return(s.mockRRSetRepository, nil)
+	s.mockRRSetRepository.EXPECT().
+		FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, repository.ErrRRSetNotFound)
+	s.mockRRSetRepository.EXPECT().
+		CreateRRSet(gomock.Any(), matchedBy(func(rrSet stackitdnsclient_new.RecordSet) bool {
+			return rrSet.Ttl == ttl
+		})).
+		Return(nil)
 
 	err := s.resolver.Present(challengeRequest)
 	s.NoError(err)

@@ -97,8 +97,13 @@ subjects:
     kind: ServiceAccount
     name: {{ .Values.certManager.serviceAccountName }}
     namespace: {{ .Values.certManager.namespace }}
+{{- $secretScope := .Values.stackitSaAuthentication.secretAccessScope | default "webhook" }}
+{{- if and (ne $secretScope "webhook") (ne $secretScope "issuer") (ne $secretScope "none") }}
+{{- fail (printf "Invalid stackitSaAuthentication.secretAccessScope %q: must be one of webhook, issuer, or none" $secretScope) }}
+{{- end }}
+{{- if ne $secretScope "none" }}
 ---
-{{- if eq (.Values.stackitSaAuthentication.secretAccessScope | default "webhook") "issuer" }}
+{{- if eq $secretScope "issuer" }}
 # Cluster-wide access to the webhook's authentication secret for issuer-scoped mode
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -116,7 +121,6 @@ rules:
       - "secrets"
     verbs:
       - "get"
-      - "watch"
 {{- else }}
 # Namespace-scoped Role for reading the webhook's authentication secret
 apiVersion: rbac.authorization.k8s.io/v1
@@ -136,13 +140,10 @@ rules:
       - "secrets"
     verbs:
       - "get"
-      - "watch"
-    resourceNames:
-      - {{ .Values.stackitSaAuthentication.secretName | default "stackit-cert-manager-webhook" }}
 {{- end }}
 ---
 # Binding for the webhook secret reader
-{{- if eq (.Values.stackitSaAuthentication.secretAccessScope | default "webhook") "issuer" }}
+{{- if eq $secretScope "issuer" }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -181,6 +182,7 @@ subjects:
     kind: ServiceAccount
     name: {{ include "stackit-cert-manager-webhook.fullname" . }}
     namespace: {{ .Release.Namespace }}
+{{- end }}
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1

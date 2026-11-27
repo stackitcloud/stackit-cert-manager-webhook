@@ -2,9 +2,11 @@ name: Bug Report
 description: File a bug report
 labels: [ bug, triage ]
 assignees:
-  - patrickkoss
   - Slm0n87
-  - mgalm
+  - fsandel
+  - jojomo96
+  - ondbeh
+  - turtschan
 body:
   - type: markdown
     attributes:

@@ -1,5 +1,5 @@
 # https://github.com/golangci/golangci-lint/releases
-GOLANGCI_VERSION = 2.12.2
+GOLANGCI_VERSION = 2.15.0
 HELM_DOCS_VERSION = 1.14.2
 LICENCES_IGNORE_LIST = $(shell cat licenses/licenses-ignore-list.txt)
 
@@ -22,8 +22,9 @@ build:
 	CGO_ENABLED=0 go build -ldflags "-s -w" -o ./bin/stackit-cert-manager-webhook -v cmd/webhook/main.go
 
 .PHONY: docker-build
-docker-build:
+docker-build: build-linux
 	docker build -t $(IMG) -f Dockerfile .
+	rm ./stackit-cert-manager-webhook
 
 test:
 	go test -race ./...

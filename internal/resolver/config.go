@@ -24,6 +24,8 @@ type defaultConfigProvider struct {
 const (
 	secretAccessScopeWebhook = "webhook"
 	secretAccessScopeIssuer  = "issuer"
+	secretAccessScopeNone    = "none"
+	defaultNamespaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 )
 
 type AuthType int
@@ -43,8 +45,14 @@ type StackitDnsProviderConfig struct {
 	ServiceAccountSecretNamespace string `json:"serviceAccountSecretNamespace"`
 	ServiceAccountKeyPath         string `json:"serviceAccountKeyPath"`
 	UseWorkloadIdentityFederation bool   `json:"useWorkloadIdentityFederation"`
-	ServiceAccountBaseUrl         string `json:"serviceAccountBaseUrl"`
 	AcmeTxtRecordTTL              int32  `json:"acmeTxtRecordTTL"`
+}
+
+type removedSolverFields struct {
+	ServiceAccountBaseUrl    string `json:"serviceAccountBaseUrl"`
+	AuthTokenSecretRef       string `json:"authTokenSecretRef"`
+	AuthTokenSecretKey       string `json:"authTokenSecretKey"`
+	AuthTokenSecretNamespace string `json:"authTokenSecretNamespace"`
 }
 
 func determineAuthType(cfg *StackitDnsProviderConfig) (AuthType, error) {
@@ -124,19 +132,63 @@ func validateSecretNamespace(configuredNamespace, webhookNamespace, accessScope 
 
 		return nil
 	case secretAccessScopeIssuer:
-		if configuredNamespace == "" {
-			return fmt.Errorf("serviceAccountSecretNamespace must be specified when secretAccessScope=issuer")
-		}
-
 		return nil
+	case secretAccessScopeNone:
+		return fmt.Errorf("dynamic secret lookup is disabled when secretAccessScope=none")
 	default:
 		return fmt.Errorf("invalid secretAccessScope %q", accessScope)
 	}
 }
 
+func validateResourceNamespace(cfg *StackitDnsProviderConfig, resourceNamespace, accessScope string) error {
+	if cfg.ServiceAccountSecretRef == "" {
+		return nil
+	}
+
+	switch accessScope {
+	case "", secretAccessScopeWebhook, secretAccessScopeIssuer:
+		// Valid scopes for dynamic secret lookup; namespace match is enforced below.
+	case secretAccessScopeNone:
+		return fmt.Errorf("dynamic secret lookup is disabled when secretAccessScope=none")
+	default:
+		return fmt.Errorf("invalid secretAccessScope %q", accessScope)
+	}
+
+	if resourceNamespace == "" {
+		return fmt.Errorf("resourceNamespace must not be empty when using serviceAccountSecretRef")
+	}
+
+	if cfg.ServiceAccountSecretNamespace == "" {
+		cfg.ServiceAccountSecretNamespace = resourceNamespace
+	}
+
+	if cfg.ServiceAccountSecretNamespace != resourceNamespace {
+		return fmt.Errorf("serviceAccountSecretNamespace must match issuer namespace %s, got: %s", resourceNamespace, cfg.ServiceAccountSecretNamespace)
+	}
+
+	return nil
+}
+
 func unmarshalConfig(cfgJSON *extapi.JSON, cfg *StackitDnsProviderConfig) error {
 	if err := json.Unmarshal(cfgJSON.Raw, cfg); err != nil {
 		return fmt.Errorf("error decoding solver configProvider: %w", err)
+	}
+
+	var removed removedSolverFields
+	if err := json.Unmarshal(cfgJSON.Raw, &removed); err != nil {
+		return fmt.Errorf("error decoding solver configProvider: %w", err)
+	}
+
+	return validateRemovedFields(&removed)
+}
+
+func validateRemovedFields(removed *removedSolverFields) error {
+	if removed.ServiceAccountBaseUrl != "" {
+		return fmt.Errorf("serviceAccountBaseUrl is no longer supported in solver config; configure STACKIT_SERVICE_ACCOUNT_BASE_URL on the webhook pod instead")
+	}
+
+	if removed.AuthTokenSecretRef != "" || removed.AuthTokenSecretKey != "" || removed.AuthTokenSecretNamespace != "" {
+		return fmt.Errorf("bearer token authentication (authTokenSecretRef) was removed in v1.0.0; migrate to serviceAccountSecretRef, serviceAccountKeyPath, useWorkloadIdentityFederation, or DefaultAuth")
 	}
 
 	return nil
@@ -175,7 +227,7 @@ func validateSaKeyPath(keyPath string) error {
 
 	clean := filepath.Clean(keyPath)
 
-	if !strings.HasPrefix(clean, allowedPrefix) && clean != strings.TrimSuffix(allowedPrefix, "/") {
+	if !strings.HasPrefix(clean, allowedPrefix) {
 		return fmt.Errorf("serviceAccountKeyPath must be within %s, got: %s", allowedPrefix, clean)
 	}
 
@@ -187,12 +239,22 @@ func setDefaultValues(cfg *StackitDnsProviderConfig) {
 		cfg.ApiBasePath = "https://dns.api.stackit.cloud"
 	}
 
+	if cfg.ServiceAccountSecretRef != "" && cfg.ServiceAccountSecretKey == "" {
+		cfg.ServiceAccountSecretKey = "sa.json"
+	}
+
 	if cfg.AcmeTxtRecordTTL == 0 {
 		cfg.AcmeTxtRecordTTL = 60
 	}
 }
 
 func determineNamespace(fileNamespaceName string) (string, error) {
+	if fileNamespaceName == defaultNamespaceFilePath {
+		if envNS := strings.TrimSpace(os.Getenv("POD_NAMESPACE")); envNS != "" {
+			return envNS, nil
+		}
+	}
+
 	data, err := os.ReadFile(fileNamespaceName)
 	if err != nil {
 		return "", fmt.Errorf("failed to find the webhook pod namespace: %w", err)
@@ -206,9 +268,13 @@ func determineNamespace(fileNamespaceName string) (string, error) {
 	return namespace, nil
 }
 
+func getSecretAccessScope() string {
+	return strings.ToLower(strings.TrimSpace(os.Getenv("STACKIT_SECRET_ACCESS_SCOPE")))
+}
+
 func NewConfigProvider() ConfigProvider {
 	return defaultConfigProvider{
-		fileNamespaceName: "/var/run/secrets/kubernetes.io/serviceaccount/namespace",
-		secretAccessScope: strings.ToLower(strings.TrimSpace(os.Getenv("STACKIT_SECRET_ACCESS_SCOPE"))),
+		fileNamespaceName: defaultNamespaceFilePath,
+		secretAccessScope: getSecretAccessScope(),
 	}
 }

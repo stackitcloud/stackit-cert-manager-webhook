@@ -12,6 +12,7 @@ The test suite consists of the following sequential test scenarios:
 
 1. **`record-lifecycle`**: Verifies the creation, propagation check, certificate issuance, and cleanup of a standard single domain certificate (`e2e-cert.<ZONE_NAME>`).
 2. **`wildcard-certificate`**: Verifies concurrent challenge handling for a wildcard certificate request covering both base and wildcard domains (`*.e2e-wildcard.<ZONE_NAME>` and `e2e-wildcard.<ZONE_NAME>`).
+3. **`dynamic-sa-auth`**: Verifies multi-tenant certificate issuance across separate namespaces (`e2e-tenant` and `e2e-tenant-two`) using dynamic Service Account secret lookup.
 
 ---
 

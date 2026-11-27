@@ -1,7 +1,7 @@
 version: "2"
 run:
   concurrency: 4
-  go: "1.26"
+  go: "1.27"
   issues-exit-code: 1
   tests: true
   allow-parallel-runners: false

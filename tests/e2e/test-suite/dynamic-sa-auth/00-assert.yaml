@@ -17,3 +17,13 @@ status:
   conditions:
     - type: Ready
       status: "True"
+---
+apiVersion: acme.cert-manager.io/v1
+kind: Challenge
+metadata:
+  namespace: e2e-tenant
+spec:
+  dnsName: "e2e-cross-tenant.${ZONE_NAME}"
+status:
+  presented: false
+  state: pending

@@ -14,8 +14,7 @@ For appropriate test initialization within the STACKIT ecosystem, you must confi
    {
      "projectId": "c242332a-ae82-42e2-80e8-eed338fd2b2f",
      "serviceAccountSecretRef": "stackit-cert-manager-webhook",
-     "serviceAccountSecretKey": "sa.json",
-     "serviceAccountSecretNamespace": "default"
+     "serviceAccountSecretKey": "sa.json"
    }
    ```
    This assumes the specified project exists, and the Service Account key possesses the requisite DNS Admin privileges.

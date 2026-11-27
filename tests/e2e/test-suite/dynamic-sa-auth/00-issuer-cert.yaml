@@ -69,3 +69,39 @@ spec:
   commonName: "e2e-tenant-two.${ZONE_NAME}"
   dnsNames:
     - "e2e-tenant-two.${ZONE_NAME}"
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: stackit-cross-tenant-issuer
+  namespace: e2e-tenant
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: e2e-cross-tenant@stackit.de
+    privateKeySecretRef:
+      name: stackit-cross-tenant-issuer-key
+    solvers:
+      - dns01:
+          webhook:
+            solverName: stackit
+            groupName: acme.stackit.de
+            config:
+              projectId: ${PROJECT_ID}
+              serviceAccountSecretRef: stackit-dynamic-auth
+              serviceAccountSecretKey: sa.json
+              serviceAccountSecretNamespace: e2e-tenant-two
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-cross-tenant-cert
+  namespace: e2e-tenant
+spec:
+  secretName: e2e-cross-tenant-cert-tls
+  issuerRef:
+    name: stackit-cross-tenant-issuer
+    kind: Issuer
+  commonName: "e2e-cross-tenant.${ZONE_NAME}"
+  dnsNames:
+    - "e2e-cross-tenant.${ZONE_NAME}"

@@ -12,6 +12,12 @@ groupName: acme.stackit.de
 # -- Replicas for the webhook. Since it is a stateless application server that sends requests you can increase the number as you want. Most of the time however, 1 replica is enough.
 replicaCount: 1
 
+# -- Deployment-level annotations.
+annotations: {}
+
+# -- Pod-level annotations.
+podAnnotations: {}
+
 # -- Meta information of the cert-manager itself.
 certManager:
   # -- namespace where the webhook should be installed. Cert-Manager and the webhook should be in the same namespace.
@@ -23,7 +29,7 @@ certManager:
 serviceAccount:
   # -- service account annotations. Add workload-identity annotations here for WIF authentication.
   annotations: {}
- 
+
 # -- Image information for the webhook.
 image:
   # -- repository of the image.
@@ -40,12 +46,11 @@ nameOverride: ""
 # -- Fullname override of the webhook.
 fullnameOverride: ""
 
-# -- Configuration for the stackit service account keys (Static Global Fallback).
+# -- Configuration for STACKIT Service Account authentication and dynamic secret RBAC scope.
 stackitSaAuthentication:
   # -- enabled flag for mounting the static STACKIT Service Account key JSON.
   enabled: false
-  # -- controls whether the webhook secret is read only from the webhook namespace or may be read from the issuer namespace.
-  # -- secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended) or "issuer" to allow issuer-namespace secret lookup.
+  # -- secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended), "issuer" to allow issuer-namespace secret lookup, or "none" to disable secret-reader RBAC when using WIF or static SA.
   secretAccessScope: webhook
   # -- secret where the static Service Account key JSON is stored. Should be in the same namespace as the webhook since it will be mounted into the pod.
   secretName: stackit-sa-authentication
@@ -60,6 +65,11 @@ service:
   type: ClusterIP
   # -- port of the service.
   port: 443
+
+# -- Configuration for the APIService.
+apiService:
+  # -- APIService annotations.
+  annotations: {}
 
 # -- Kubernetes resources for the webhook. Usually limits.cpu=100m, limits.memory=128Mi, requests.cpu=100m, requests.memory=128Mi is enough for the webhook.
 resources:

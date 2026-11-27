@@ -1,6 +1,6 @@
 # stackit-cert-manager-webhook
 
-![Version: 0.4.11](https://img.shields.io/badge/Version-0.4.11-informational?style=flat-square) ![AppVersion: v0.4.11](https://img.shields.io/badge/AppVersion-v0.4.11-informational?style=flat-square)
+![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![AppVersion: v1.0.0](https://img.shields.io/badge/AppVersion-v1.0.0-informational?style=flat-square)
 
 A Helm chart for stackitcloud/stackit-cert-manager-webhook
 
@@ -11,6 +11,9 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | additionalVolumeMounts | list | `[]` |  |
 | additionalVolumes | list | `[]` |  |
 | affinity | object | `{}` |  |
+| annotations | object | `{}` | Deployment-level annotations. |
+| apiService | object | `{"annotations":{}}` | Configuration for the APIService. |
+| apiService.annotations | object | `{}` | APIService annotations. |
 | certManager | object | `{"namespace":"cert-manager","serviceAccountName":"cert-manager"}` | Meta information of the cert-manager itself. |
 | certManager.namespace | string | `"cert-manager"` | namespace where the webhook should be installed. Cert-Manager and the webhook should be in the same namespace. |
 | certManager.serviceAccountName | string | `"cert-manager"` | service account name for the cert-manager. |
@@ -23,6 +26,7 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | imagePullSecrets | list | `[]` |  |
 | nameOverride | string | `""` | Webhook configuration. |
 | nodeSelector | object | `{}` | Node selector for the webhook. |
+| podAnnotations | object | `{}` | Pod-level annotations. |
 | podSecurityContext.runAsGroup | int | `1000` |  |
 | podSecurityContext.runAsNonRoot | bool | `true` |  |
 | podSecurityContext.runAsUser | int | `1000` |  |
@@ -37,11 +41,11 @@ A Helm chart for stackitcloud/stackit-cert-manager-webhook
 | service.type | string | `"ClusterIP"` | type of the service. |
 | serviceAccount | object | `{"annotations":{}}` | Service Account |
 | serviceAccount.annotations | object | `{}` | service account annotations. Add workload-identity annotations here for WIF authentication. |
-| stackitSaAuthentication | object | `{"enabled":false,"fileName":"sa.json","mountPath":"/var/run/secrets/stackit","secretAccessScope":"webhook","secretName":"stackit-sa-authentication"}` | Configuration for the stackit service account keys (Static Global Fallback). |
+| stackitSaAuthentication | object | `{"enabled":false,"fileName":"sa.json","mountPath":"/var/run/secrets/stackit","secretAccessScope":"webhook","secretName":"stackit-sa-authentication"}` | Configuration for STACKIT Service Account authentication and dynamic secret RBAC scope. |
 | stackitSaAuthentication.enabled | bool | `false` | enabled flag for mounting the static STACKIT Service Account key JSON. |
 | stackitSaAuthentication.fileName | string | `"sa.json"` | key of the Service Account JSON within the secret. |
 | stackitSaAuthentication.mountPath | string | `"/var/run/secrets/stackit"` | Path where the secret will be mounted in the pod. Must be /var/run/secrets/stackit/ |
-| stackitSaAuthentication.secretAccessScope | string | `"webhook"` | secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended) or "issuer" to allow issuer-namespace secret lookup. |
+| stackitSaAuthentication.secretAccessScope | string | `"webhook"` | secret access scope for dynamic SA lookup. Use "webhook" for namespace-scoped access (recommended), "issuer" to allow issuer-namespace secret lookup, or "none" to disable secret-reader RBAC when using WIF or static SA. |
 | stackitSaAuthentication.secretName | string | `"stackit-sa-authentication"` | secret where the static Service Account key JSON is stored. Should be in the same namespace as the webhook since it will be mounted into the pod. |
 | tolerations | list | `[]` | Tolerations for the webhook. |
 

@@ -217,6 +217,49 @@ func (s *presentSuite) TestAuthMethodSelectionDynamicSA() {
 	s.Same(origTransport, s.httpClient.Transport, "shared httpClient.Transport must not be mutated in-place by SDK auth wrapper")
 }
 
+func (s *presentSuite) TestAPIClientReuseAndRotation() {
+	rotatedKey := generateDummyPrivateKey()
+	rotatedSAKeyJSON := fmt.Sprintf(`{"id":"11111111-1111-1111-1111-111111111111","credentials":{"privateKey":%q}}`, rotatedKey)
+
+	cfg := resolver.StackitDnsProviderConfig{
+		ServiceAccountSecretRef:       testSecret,
+		ServiceAccountSecretKey:       testSecretKey,
+		ServiceAccountSecretNamespace: testDefaultNS,
+	}
+
+	var capturedClients []*stackitdnsclient_new.APIClient
+
+	s.mockConfigProvider.EXPECT().LoadConfig(gomock.Any()).Return(cfg, nil).Times(3)
+
+	gomock.InOrder(
+		s.mockSecretFetcher.EXPECT().StringFromSecret(testDefaultNS, testSecret, testSecretKey).Return(s.dummySAKeyJSON, nil),
+		s.mockSecretFetcher.EXPECT().StringFromSecret(testDefaultNS, testSecret, testSecretKey).Return(s.dummySAKeyJSON, nil),
+		s.mockSecretFetcher.EXPECT().StringFromSecret(testDefaultNS, testSecret, testSecretKey).Return(rotatedSAKeyJSON, nil),
+	)
+
+	s.mockZoneRepositoryFactory.EXPECT().
+		NewZoneRepository(gomock.Any()).
+		DoAndReturn(func(c repository.Config) (repository.ZoneRepository, error) {
+			capturedClients = append(capturedClients, c.ApiClient)
+
+			return s.mockZoneRepository, nil
+		}).
+		Times(3)
+
+	s.mockZoneRepository.EXPECT().FetchZone(gomock.Any(), gomock.Any()).Return(&stackitdnsclient_new.Zone{Id: testID}, nil).Times(3)
+	s.mockRRSetRepositoryFactory.EXPECT().NewRRSetRepository(gomock.Any(), gomock.Any()).Return(s.mockRRSetRepository, nil).Times(3)
+	s.mockRRSetRepository.EXPECT().FetchRRSetForZone(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, repository.ErrRRSetNotFound).Times(3)
+	s.mockRRSetRepository.EXPECT().CreateRRSet(gomock.Any(), gomock.Any()).Return(nil).Times(3)
+
+	s.Require().NoError(s.resolver.Present(challengeRequest))
+	s.Require().NoError(s.resolver.Present(challengeRequest))
+	s.Require().NoError(s.resolver.Present(challengeRequest))
+
+	s.Require().Len(capturedClients, 3)
+	s.Same(capturedClients[0], capturedClients[1], "identical credentials should reuse cached APIClient")
+	s.NotSame(capturedClients[0], capturedClients[2], "rotated secret credentials should create a new APIClient")
+}
+
 func (s *presentSuite) TestAuthMethodSelectionStaticSA() {
 	f, err := os.CreateTemp("", "sa.json")
 	s.Require().NoError(err)

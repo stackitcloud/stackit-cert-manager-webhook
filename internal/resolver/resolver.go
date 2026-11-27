@@ -2,12 +2,15 @@ package resolver
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
@@ -19,7 +22,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const typeTxtRecord = "TXT"
+const (
+	typeTxtRecord    = "TXT"
+	maxCachedClients = 64
+)
 
 func NewResolver(
 	httpClient *http.Client,
@@ -37,6 +43,7 @@ func NewResolver(
 		zoneRepositoryFactory:  zoneRepositoryFactory,
 		rrSetRepositoryFactory: rrSetRepositoryFactory,
 		logger:                 logger,
+		apiClients:             make(map[string]*stackitdnsclient.APIClient),
 	}
 }
 
@@ -48,6 +55,8 @@ type stackitDnsProviderResolver struct {
 	zoneRepositoryFactory  repository.ZoneRepositoryFactory
 	rrSetRepositoryFactory repository.RRSetRepositoryFactory
 	logger                 *zap.Logger
+	clientMu               sync.RWMutex
+	apiClients             map[string]*stackitdnsclient.APIClient
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -223,18 +232,9 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 		return repository.Config{}, err
 	}
 
-	options := []stackitconfig.ConfigurationOption{
-		stackitconfig.WithHTTPClient(s.cloneHTTPClient()),
-		stackitconfig.WithEndpoint(cfg.ApiBasePath),
-	}
-
-	if tokenBaseURL := strings.TrimSpace(os.Getenv("STACKIT_SERVICE_ACCOUNT_BASE_URL")); len(tokenBaseURL) > 0 {
-		options = append(options, stackitconfig.WithTokenEndpoint(tokenBaseURL))
-	}
-
-	switch authType {
-	case AuthTypeDynamicSA:
-		saKeyJSON, err := s.secretFetcher.StringFromSecret(
+	var saKeyJSON string
+	if authType == AuthTypeDynamicSA {
+		saKeyJSON, err = s.secretFetcher.StringFromSecret(
 			cfg.ServiceAccountSecretNamespace,
 			cfg.ServiceAccountSecretRef,
 			cfg.ServiceAccountSecretKey,
@@ -242,6 +242,29 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 		if err != nil {
 			return repository.Config{}, fmt.Errorf("failed to fetch service account key from secret: %w", err)
 		}
+	}
+
+	tokenBaseURL := strings.TrimSpace(os.Getenv("STACKIT_SERVICE_ACCOUNT_BASE_URL"))
+	cacheKey := buildClientCacheKey(cfg.ApiBasePath, tokenBaseURL, authType, cfg.ServiceAccountKeyPath, saKeyJSON)
+
+	if cachedClient := s.getCachedAPIClient(cacheKey); cachedClient != nil {
+		return repository.Config{
+			ProjectId: cfg.ProjectId,
+			ApiClient: cachedClient,
+		}, nil
+	}
+
+	options := []stackitconfig.ConfigurationOption{
+		stackitconfig.WithHTTPClient(s.cloneHTTPClient()),
+		stackitconfig.WithEndpoint(cfg.ApiBasePath),
+	}
+
+	if len(tokenBaseURL) > 0 {
+		options = append(options, stackitconfig.WithTokenEndpoint(tokenBaseURL))
+	}
+
+	switch authType {
+	case AuthTypeDynamicSA:
 		options = append(options, stackitconfig.WithServiceAccountKey(saKeyJSON))
 		s.logger.Info("Using dynamic service account key from secret for authentication")
 	case AuthTypeStaticSA:
@@ -259,10 +282,44 @@ func (s *stackitDnsProviderResolver) getRepositoryConfig(
 		return repository.Config{}, fmt.Errorf("failed to create STACKIT API client: %w", err)
 	}
 
+	s.cacheAPIClient(cacheKey, apiClient)
+
 	return repository.Config{
 		ProjectId: cfg.ProjectId,
 		ApiClient: apiClient,
 	}, nil
+}
+
+func buildClientCacheKey(apiBasePath, tokenBaseURL string, authType AuthType, saKeyPath, saKeyJSON string) string {
+	var credentialFingerprint string
+	if len(saKeyJSON) > 0 {
+		sum := sha256.Sum256([]byte(saKeyJSON))
+		credentialFingerprint = hex.EncodeToString(sum[:])
+	}
+
+	return fmt.Sprintf("%d|%s|%s|%s|%s", authType, apiBasePath, tokenBaseURL, saKeyPath, credentialFingerprint)
+}
+
+func (s *stackitDnsProviderResolver) getCachedAPIClient(cacheKey string) *stackitdnsclient.APIClient {
+	s.clientMu.RLock()
+	defer s.clientMu.RUnlock()
+
+	if s.apiClients == nil {
+		return nil
+	}
+
+	return s.apiClients[cacheKey]
+}
+
+func (s *stackitDnsProviderResolver) cacheAPIClient(cacheKey string, apiClient *stackitdnsclient.APIClient) {
+	s.clientMu.Lock()
+	defer s.clientMu.Unlock()
+
+	if s.apiClients == nil || len(s.apiClients) >= maxCachedClients {
+		s.apiClients = make(map[string]*stackitdnsclient.APIClient)
+	}
+
+	s.apiClients[cacheKey] = apiClient
 }
 
 func (s *stackitDnsProviderResolver) cloneHTTPClient() *http.Client {
